@@ -116,4 +116,25 @@ describe('emit', () => {
     const b = diagnostics_channel.channel('aviary:billing:invoice-paid');
     expect(a).toBe(b);
   });
+
+  it('shares the accessor through a globalThis singleton across module copies', () => {
+    // A divergent copy of this package would set the accessor on the SAME
+    // `Symbol.for` slot; `emit()` in any copy reads that one cell. Simulate the
+    // other copy by writing the slot directly and asserting our `emit` sees it.
+    const ACCESSOR_KEY = Symbol.for('@dudousxd/nestjs-diagnostics:accessor');
+    const slot = (globalThis as Record<symbol, { current: unknown } | undefined>)[ACCESSOR_KEY];
+    expect(slot).toBeDefined();
+    slot!.current = {
+      traceId: () => 'trace-from-other-copy',
+      tenantId: () => undefined,
+      userRef: () => undefined,
+      get: () => undefined,
+    };
+
+    const cap = capture(channelName('billing', 'invoice-paid'));
+    stop = cap.stop;
+    emit('billing', 'invoice-paid', {});
+
+    expect(cap.events[0]?.traceId).toBe('trace-from-other-copy');
+  });
 });

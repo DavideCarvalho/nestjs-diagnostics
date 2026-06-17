@@ -10,11 +10,32 @@
  * {@link onChannelRegistered} for future additions.
  */
 
-/** Every channel name seen so far, in insertion order. */
-const channels = new Set<string>();
+/**
+ * The registry state, backed by a `Symbol.for` key on `globalThis`. Even when
+ * more than one physical copy of this package is loaded (divergent version ranges
+ * that pnpm cannot dedupe into a single instance), every copy resolves the SAME
+ * `channels`/`listeners`. The channel objects themselves are already process-global
+ * via `node:diagnostics_channel`; this makes their discovery registry equally
+ * global, so a generic observer always sees every emitted channel regardless of
+ * which copy registered it. Uses the same `Symbol.for` global-registry technique
+ * the `@dudousxd/nestjs-*` family uses for cross-copy-stable identifiers (e.g. the
+ * `CONTEXT_ACCESSOR` token).
+ */
+interface Registry {
+  /** Every channel name seen so far, in insertion order. */
+  channels: Set<string>;
+  /** Listeners notified once per newly-registered channel name. */
+  listeners: Set<(name: string) => void>;
+}
 
-/** Listeners notified once per newly-registered channel name. */
-const listeners = new Set<(name: string) => void>();
+const REGISTRY_KEY = Symbol.for('@dudousxd/nestjs-diagnostics:registry');
+const globalStore = globalThis as typeof globalThis & { [REGISTRY_KEY]?: Registry };
+const registry: Registry = globalStore[REGISTRY_KEY] ?? {
+  channels: new Set<string>(),
+  listeners: new Set<(name: string) => void>(),
+};
+globalStore[REGISTRY_KEY] = registry;
+const { channels, listeners } = registry;
 
 /**
  * Record a channel name, notifying {@link onChannelRegistered} listeners the first

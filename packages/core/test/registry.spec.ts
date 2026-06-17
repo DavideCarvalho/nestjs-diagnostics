@@ -56,4 +56,23 @@ describe('channel registry', () => {
 
     expect(subscribed).toEqual(['aviary:billing:existing', 'aviary:billing:future']);
   });
+
+  it('shares state through a globalThis singleton, so a second module copy sees the same registry', () => {
+    // A divergent (un-dedupable) copy of this package would run its own module
+    // body, but it resolves the SAME `Symbol.for` slot on globalThis. Simulate
+    // that copy by reading the slot directly: a channel registered through the
+    // public API must be visible there, and a name injected there must surface
+    // through the public API.
+    const REGISTRY_KEY = Symbol.for('@dudousxd/nestjs-diagnostics:registry');
+    const slot = (globalThis as Record<symbol, { channels: Set<string> } | undefined>)[
+      REGISTRY_KEY
+    ];
+    expect(slot).toBeDefined();
+
+    registerChannel('aviary:copyA:event');
+    expect(slot?.channels.has('aviary:copyA:event')).toBe(true);
+
+    slot?.channels.add('aviary:copyB:event');
+    expect(registeredChannels()).toContain('aviary:copyB:event');
+  });
 });

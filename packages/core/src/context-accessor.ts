@@ -39,25 +39,40 @@ export interface ContextAccessor {
 export const CONTEXT_ACCESSOR = Symbol.for('@dudousxd/nestjs-context:accessor');
 
 /**
- * Module-level accessor used by {@link emit} to auto-fill `traceId`. `null` until
- * an app calls {@link setContextAccessor} (e.g. from a Nest module's `onModuleInit`
- * after resolving the optional {@link CONTEXT_ACCESSOR} provider). Kept out of
- * the hot path: when unset, `emit` simply leaves `traceId` undefined.
+ * The accessor used by {@link emit} to auto-fill `traceId`. `null` until something
+ * calls {@link setContextAccessor} — `@dudousxd/nestjs-context` does this at module
+ * init (soft-detecting this package), so `traceId` correlates automatically when
+ * context is installed. Kept out of the hot path: when unset, `emit` leaves
+ * `traceId` undefined.
+ *
+ * Backed by a `Symbol.for` slot on `globalThis` — same technique as the channel
+ * {@link registerChannel registry} — so the accessor registered through one
+ * physical copy of this package is visible to `emit()` in every copy, even when
+ * divergent versions prevent pnpm from deduping to a single instance. Held inside
+ * an object (`{ current }`) so all copies share one mutable cell.
  */
-let accessor: ContextAccessor | null = null;
+interface AccessorHolder {
+  current: ContextAccessor | null;
+}
+
+const ACCESSOR_KEY = Symbol.for('@dudousxd/nestjs-diagnostics:accessor');
+const accessorStore = globalThis as typeof globalThis & { [ACCESSOR_KEY]?: AccessorHolder };
+const accessorHolder: AccessorHolder = accessorStore[ACCESSOR_KEY] ?? { current: null };
+accessorStore[ACCESSOR_KEY] = accessorHolder;
 
 /** Register (or clear, with `null`) the accessor {@link emit} reads `traceId` from. */
 export function setContextAccessor(next: ContextAccessor | null): void {
-  accessor = next;
+  accessorHolder.current = next;
 }
 
 /** The currently registered accessor, or `null`. */
 export function getContextAccessor(): ContextAccessor | null {
-  return accessor;
+  return accessorHolder.current;
 }
 
 /** Resolve the current trace id from the registered accessor, never throwing. */
 export function resolveTraceId(): string | undefined {
+  const accessor = accessorHolder.current;
   if (accessor == null) return undefined;
   try {
     return accessor.traceId();
