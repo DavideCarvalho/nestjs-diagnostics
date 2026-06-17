@@ -80,13 +80,7 @@ export function emit(lib: string, event: string, payload: unknown, opts?: EmitOp
   if (!channel.hasSubscribers) return;
   try {
     const traceId = opts?.traceId ?? resolveTraceId();
-    const envelope: DiagnosticEvent = {
-      ts: Date.now(),
-      lib,
-      event,
-      ...(traceId !== undefined ? { traceId } : {}),
-      payload,
-    };
+    const envelope: DiagnosticEvent = { ts: Date.now(), lib, event, traceId, payload };
     channel.publish(envelope);
   } catch {
     // Observability must never break the emitting code path.

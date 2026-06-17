@@ -12,8 +12,12 @@ export interface DiagnosticEvent<TPayload = unknown> {
   lib: string;
   /** The event name, e.g. `'invoice-paid'` — the `<event>` in `aviary:<lib>:<event>`. */
   event: string;
-  /** Trace id for the current request, when resolvable from a context accessor. */
-  traceId?: string;
+  /**
+   * Trace id for the current request, when resolvable from a context accessor.
+   * Always present on the emitted envelope as a stable-shape key (monomorphic);
+   * `undefined` when unresolved. Serializes identically to an absent key.
+   */
+  traceId?: string | undefined;
   /** The library-defined payload. Opaque to this package and to observers. */
   payload: TPayload;
 }
