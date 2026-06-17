@@ -1,5 +1,22 @@
 # @dudousxd/nestjs-diagnostics
 
+## 0.2.2
+
+### Patch Changes
+
+- [#4](https://github.com/DavideCarvalho/nestjs-diagnostics/pull/4) [`2d9b817`](https://github.com/DavideCarvalho/nestjs-diagnostics/commit/2d9b817158b058e0c6413acfa8c2b3acd3728a6a) Thanks [@DavideCarvalho](https://github.com/DavideCarvalho)! - Make `emit()`/`getChannel()` ~11x cheaper on the hot path by memoizing the
+  resolved channel per `(lib, event)` pair. Previously every call re-built the
+  `aviary:<lib>:<event>` string, re-looked-up the node channel, and re-checked the
+  registry — ~174 ns/op even when nobody was subscribed. Now the first call for a
+  pair pays that cost and every subsequent call is two `Map.get`s returning the same
+  channel object (~16 ns/op; the no-subscriber path allocates nothing). The
+  consumer-side pattern of caching the channel and gating on `hasSubscribers` before
+  calling `emit` (~4 ns/op) stays the cheapest and remains recommended.
+
+  No API or behavior change: channel identity, registry discovery
+  (`registeredChannels`/`onChannelRegistered`), `hasSubscribers` gating,
+  `opts.traceId` precedence, and never-throw are all unchanged.
+
 ## 0.2.1
 
 ### Patch Changes
