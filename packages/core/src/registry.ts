@@ -80,10 +80,35 @@ export function onChannelRegistered(cb: (name: string) => void): () => void {
 }
 
 /**
+ * Hooks run by {@link resetRegistry} so other modules can drop registry-derived
+ * caches in lockstep. {@link getChannel} memoizes channels and only registers a
+ * name on a cache MISS; if `resetRegistry` cleared `channels` without clearing
+ * that cache, an already-cached channel would never re-register and would vanish
+ * from discovery. Registering its cache-clear here keeps the test-only reset
+ * exact: after a reset, the next `getChannel`/`emit` re-registers every channel.
+ */
+const resetHooks = new Set<() => void>();
+
+/**
+ * Register a callback run by {@link resetRegistry}. Used internally by
+ * {@link getChannel}'s memo cache; not part of the public contract.
+ */
+export function onRegistryReset(cb: () => void): void {
+  resetHooks.add(cb);
+}
+
+/**
  * Test-only: forget every registered channel and listener. Not part of the
  * public contract — exposed so suites can assert registration in isolation.
  */
 export function resetRegistry(): void {
   channels.clear();
   listeners.clear();
+  for (const hook of resetHooks) {
+    try {
+      hook();
+    } catch {
+      // A misbehaving reset hook must never break the reset itself.
+    }
+  }
 }

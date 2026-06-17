@@ -2,7 +2,7 @@ import diagnostics_channel from 'node:diagnostics_channel';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { channelName, emit, getChannel } from '../src/channel.js';
 import { setContextAccessor } from '../src/context-accessor.js';
-import { resetRegistry } from '../src/registry.js';
+import { registeredChannels, resetRegistry } from '../src/registry.js';
 import type { DiagnosticEvent } from '../src/types.js';
 
 /** Subscribe to a channel for the duration of a test; returns captured envelopes. */
@@ -115,6 +115,27 @@ describe('emit', () => {
     const a = getChannel('billing', 'invoice-paid');
     const b = diagnostics_channel.channel('aviary:billing:invoice-paid');
     expect(a).toBe(b);
+  });
+
+  it('getChannel returns a stable cached object across repeated calls', () => {
+    const first = getChannel('billing', 'invoice-paid');
+    const second = getChannel('billing', 'invoice-paid');
+    // Same pair → same object, served from the per-(lib,event) memo cache.
+    expect(second).toBe(first);
+    // ...and still the canonical node channel for that name.
+    expect(second).toBe(diagnostics_channel.channel('aviary:billing:invoice-paid'));
+  });
+
+  it('still registers each cached channel exactly once for discovery', () => {
+    resetRegistry();
+    // Repeated getChannel/emit on the same pair must register the name once, and
+    // a second distinct pair must still be discovered — the cache must not hide
+    // channels from the registry the generic watcher reads.
+    getChannel('authz', 'decision');
+    getChannel('authz', 'decision');
+    emit('authz', 'decision', {});
+    emit('inertia', 'render', {});
+    expect(registeredChannels()).toEqual(['aviary:authz:decision', 'aviary:inertia:render']);
   });
 
   it('shares the accessor through a globalThis singleton across module copies', () => {
