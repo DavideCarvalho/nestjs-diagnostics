@@ -1,5 +1,22 @@
 # @dudousxd/nestjs-diagnostics
 
+## 0.2.1
+
+### Patch Changes
+
+- [#2](https://github.com/DavideCarvalho/nestjs-diagnostics/pull/2) [`620c4bc`](https://github.com/DavideCarvalho/nestjs-diagnostics/commit/620c4bc08ce61f7059a2dd6ce2cdc19f2d5388a5) Thanks [@DavideCarvalho](https://github.com/DavideCarvalho)! - Harden the cross-copy state to process-global singletons (keyed by `Symbol.for`
+  on `globalThis`):
+
+  - the channel **registry** (`registeredChannels` / `onChannelRegistered`), so the
+    generic Telescope watcher discovers every emitted channel; and
+  - the **context accessor** (`setContextAccessor` / `resolveTraceId`), so a `traceId`
+    registered through one copy is visible to `emit()` in another.
+
+  This matters when more than one physical copy of the package is loaded — divergent
+  version ranges that pnpm cannot dedupe into a single instance. The
+  `node:diagnostics_channel` objects were already process-global; this makes their
+  discovery registry and the trace accessor equally global. No API change.
+
 ## 0.2.0
 
 ### Minor Changes
