@@ -1,5 +1,11 @@
 # @dudousxd/nestjs-diagnostics
 
+## 0.2.3
+
+### Patch Changes
+
+- [`a37a2cd`](https://github.com/DavideCarvalho/nestjs-diagnostics/commit/a37a2cd8320188fc158ff34645eddbedad1968cd) - perf: keep the emit envelope monomorphic on the hot path — build it with a stable key set (traceId always present) instead of a conditional spread, avoiding a throwaway intermediate object per emit (~30% faster envelope build).
+
 ## 0.2.2
 
 ### Patch Changes
