@@ -1,0 +1,45 @@
+{
+  "name": "@dudousxd/nestjs-diagnostics",
+  "version": "0.1.0",
+  "description": "A standard convention for @dudousxd/nestjs-* libs to emit observability events over node:diagnostics_channel.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DavideCarvalho/nestjs-diagnostics.git",
+    "directory": "packages/core"
+  },
+  "author": "Davi Carvalho <davi@goflip.ai>",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": ["dist/", "README.md", "CHANGELOG.md"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run --passWithNoTests",
+    "test:watch": "vitest",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.4.0",
+    "vitest": "^3.0.0"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "nestjs",
+    "diagnostics",
+    "diagnostics-channel",
+    "observability",
+    "telemetry",
+    "events"
+  ]
+}

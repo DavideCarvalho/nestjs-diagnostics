@@ -1,0 +1,54 @@
+{
+  "name": "@dudousxd/nestjs-diagnostics-telescope",
+  "version": "0.1.0",
+  "description": "nestjs-telescope extension for @dudousxd/nestjs-diagnostics — one generic watcher records every aviary:<lib>:<event> diagnostic event in the Telescope dashboard.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DavideCarvalho/nestjs-diagnostics.git",
+    "directory": "packages/telescope"
+  },
+  "author": "Davi Carvalho <davi@goflip.ai>",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": ["dist/", "README.md", "CHANGELOG.md"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run --passWithNoTests",
+    "test:watch": "vitest",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@dudousxd/nestjs-diagnostics": "workspace:^"
+  },
+  "peerDependencies": {
+    "@dudousxd/nestjs-telescope": "^1.9.0"
+  },
+  "devDependencies": {
+    "@dudousxd/nestjs-telescope": "1.9.0",
+    "@dudousxd/nestjs-telescope-testing": "1.9.0",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.4.0",
+    "vitest": "^3.0.0"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "nestjs",
+    "diagnostics",
+    "diagnostics-channel",
+    "telescope",
+    "observability",
+    "watcher",
+    "extension"
+  ]
+}
