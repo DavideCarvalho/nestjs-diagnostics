@@ -1,6 +1,6 @@
 {
   "name": "@dudousxd/nestjs-diagnostics",
-  "version": "0.2.3",
+  "version": "0.3.0",
   "description": "A standard convention for @dudousxd/nestjs-* libs to emit observability events over node:diagnostics_channel.",
   "license": "MIT",
   "repository": {
