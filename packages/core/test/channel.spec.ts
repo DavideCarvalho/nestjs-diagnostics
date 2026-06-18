@@ -1,6 +1,6 @@
 import diagnostics_channel from 'node:diagnostics_channel';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { channelName, emit, getChannel } from '../src/channel.js';
+import { SCHEMA_VERSION, channelName, emit, getChannel } from '../src/channel.js';
 import { setContextAccessor } from '../src/context-accessor.js';
 import { registeredChannels, resetRegistry } from '../src/registry.js';
 import type { DiagnosticEvent } from '../src/types.js';
@@ -45,6 +45,91 @@ describe('emit', () => {
     expect(env?.traceId).toBeUndefined();
     expect(env?.ts).toBeGreaterThanOrEqual(before);
     expect(env?.ts).toBeLessThanOrEqual(after);
+    expect(env?.v).toBe(SCHEMA_VERSION);
+  });
+
+  it('stamps the current schema version on the envelope', () => {
+    const cap = capture(channelName('billing', 'invoice-paid'));
+    stop = cap.stop;
+
+    emit('billing', 'invoice-paid', { ok: true });
+
+    expect(SCHEMA_VERSION).toBe(1);
+    expect(cap.events[0]?.v).toBe(SCHEMA_VERSION);
+  });
+
+  it('skips building + publishing when opts.sample returns false', () => {
+    const cap = capture(channelName('billing', 'invoice-paid'));
+    stop = cap.stop;
+
+    let calls = 0;
+    const sample = () => {
+      calls++;
+      return false;
+    };
+    emit('billing', 'invoice-paid', { ok: true }, { sample });
+
+    // Sampler consulted exactly once, and nothing was published.
+    expect(calls).toBe(1);
+    expect(cap.events).toHaveLength(0);
+  });
+
+  it('publishes when opts.sample returns true', () => {
+    const cap = capture(channelName('billing', 'invoice-paid'));
+    stop = cap.stop;
+
+    emit('billing', 'invoice-paid', { ok: true }, { sample: () => true });
+
+    expect(cap.events).toHaveLength(1);
+    expect(cap.events[0]?.payload).toEqual({ ok: true });
+  });
+
+  it('publishes by default (no sampling) — current behavior preserved', () => {
+    const cap = capture(channelName('billing', 'invoice-paid'));
+    stop = cap.stop;
+
+    emit('billing', 'invoice-paid', { ok: true });
+
+    expect(cap.events).toHaveLength(1);
+  });
+
+  it('does not consult the sampler when nothing subscribes', () => {
+    let calls = 0;
+    emit(
+      'billing',
+      'no-listener',
+      { a: 1 },
+      {
+        sample: () => {
+          calls++;
+          return true;
+        },
+      },
+    );
+    expect(calls).toBe(0);
+  });
+
+  it('treats a throwing sampler as a skip (never breaks the caller)', () => {
+    const cap = capture(channelName('billing', 'invoice-paid'));
+    stop = cap.stop;
+
+    let threw = false;
+    try {
+      emit(
+        'billing',
+        'invoice-paid',
+        { ok: true },
+        {
+          sample: () => {
+            throw new Error('boom');
+          },
+        },
+      );
+    } catch {
+      threw = true;
+    }
+    expect(threw).toBe(false);
+    expect(cap.events).toHaveLength(0);
   });
 
   it('does not publish (or build an envelope) when nothing subscribes', () => {

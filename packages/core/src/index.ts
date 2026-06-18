@@ -1,4 +1,4 @@
-export { CHANNEL_PREFIX, channelName, emit, getChannel } from './channel.js';
+export { CHANNEL_PREFIX, channelName, emit, getChannel, SCHEMA_VERSION } from './channel.js';
 export {
   CONTEXT_ACCESSOR,
   type ContextAccessor,
@@ -14,4 +14,22 @@ export {
   registeredChannels,
   resetRegistry,
 } from './registry.js';
-export type { DiagnosticEvent, EmitOptions } from './types.js';
+export {
+  SPAN_SCHEMA_VERSION,
+  trace,
+  type TraceChannelNames,
+  traceChannelNames,
+  type TracingChannel,
+  tracingChannel,
+} from './trace.js';
+export type {
+  ChannelRegistry,
+  DiagnosticEvent,
+  EmitOptions,
+  EventOf,
+  LibOf,
+  PayloadOf,
+  SpanEvent,
+  SpanPhase,
+  TraceOptions,
+} from './types.js';

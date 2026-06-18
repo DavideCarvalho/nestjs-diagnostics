@@ -1,10 +1,18 @@
 import diagnostics_channel, { type Channel } from 'node:diagnostics_channel';
 import { resolveTraceId } from './context-accessor.js';
 import { onRegistryReset, registerChannel } from './registry.js';
-import type { DiagnosticEvent, EmitOptions } from './types.js';
+import type { DiagnosticEvent, EmitOptions, EventOf, LibOf, PayloadOf } from './types.js';
 
 /** The prefix all channels created by this convention share. */
 export const CHANNEL_PREFIX = 'aviary';
+
+/**
+ * Current envelope schema version, stamped onto every emitted
+ * {@link DiagnosticEvent} as `v`. Bump this only when the wire shape changes in a
+ * way observers must adapt to. Observers should tolerate envelopes without `v`
+ * (legacy emitters published before versioning) and treat them as version `1`.
+ */
+export const SCHEMA_VERSION = 1;
 
 /**
  * The channel name for a `<lib>`/`<event>` pair: `aviary:<lib>:<event>`. This is
@@ -69,18 +77,44 @@ export function getChannel(lib: string, event: string): Channel {
  *   registered context accessor (if resolvable), else left undefined.
  * - The envelope is built and published ONLY when the channel `hasSubscribers`,
  *   so emitting is effectively free when nothing is listening.
+ * - When `opts.sample` is given, it is consulted AFTER the `hasSubscribers` gate
+ *   and BEFORE the envelope is built: a falsy result sheds this event without
+ *   allocating anything. Default (no `sample`) always publishes when subscribed.
+ * - The envelope carries the current {@link SCHEMA_VERSION} as `v`.
  * - Never throws: emitting observability must not break the caller.
  *
  * ```ts
  * emit('billing', 'invoice-paid', { invoiceId: 'inv_123', amount: 4200 });
+ * // Shed 90% of a hot event:
+ * emit('authz', 'decision', payload, { sample: () => Math.random() < 0.1 });
  * ```
+ *
+ * When `(lib, event)` is declared in the typed
+ * {@link import('./types.js').ChannelRegistry ChannelRegistry}, `payload` is
+ * checked against the declared type at compile time; every other pair keeps the
+ * untyped `unknown` payload. The runtime behavior is identical either way.
  */
-export function emit(lib: string, event: string, payload: unknown, opts?: EmitOptions): void {
+export function emit<TLib extends LibOf, TEvent extends EventOf<TLib>>(
+  lib: TLib,
+  event: TEvent,
+  payload: PayloadOf<TLib, TEvent>,
+  opts?: EmitOptions,
+): void {
   const channel = getChannel(lib, event);
   if (!channel.hasSubscribers) return;
   try {
+    // Load-shedding gate: consulted only when subscribed, before any allocation.
+    // A throwing sampler is treated as a skip (caught below) — never published.
+    if (opts?.sample !== undefined && !opts.sample()) return;
     const traceId = opts?.traceId ?? resolveTraceId();
-    const envelope: DiagnosticEvent = { ts: Date.now(), lib, event, traceId, payload };
+    const envelope: DiagnosticEvent = {
+      v: SCHEMA_VERSION,
+      ts: Date.now(),
+      lib,
+      event,
+      traceId,
+      payload,
+    };
     channel.publish(envelope);
   } catch {
     // Observability must never break the emitting code path.

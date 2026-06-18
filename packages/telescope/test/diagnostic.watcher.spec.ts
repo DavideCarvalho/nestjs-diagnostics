@@ -1,7 +1,12 @@
-import { emit, resetRegistry, setContextAccessor } from '@dudousxd/nestjs-diagnostics';
+import { emit, getChannel, resetRegistry, setContextAccessor } from '@dudousxd/nestjs-diagnostics';
 import { collectWatcherEntries } from '@dudousxd/nestjs-telescope-testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { type DiagnosticEntryContent, DiagnosticWatcher } from '../src/diagnostic.watcher.js';
+import {
+  type DiagnosticEntryContent,
+  DiagnosticWatcher,
+  buildDiagnosticEntry,
+  isDiagnosticEvent,
+} from '../src/diagnostic.watcher.js';
 
 describe('DiagnosticWatcher', () => {
   let cleanup: (() => void) | undefined;
@@ -79,6 +84,54 @@ describe('DiagnosticWatcher', () => {
 
     expect(recorded).toHaveLength(1);
     expect((recorded[0]?.content as DiagnosticEntryContent).payload).toEqual({ key: 'b' });
+  });
+
+  it('records the envelope schema version (v) when present', async () => {
+    const watcher = new DiagnosticWatcher();
+    const { recorded } = await collectWatcherEntries(watcher);
+    cleanup = () => watcher.cleanup();
+
+    emit('billing', 'invoice-paid', { ok: true });
+
+    const content = recorded[0]?.content as DiagnosticEntryContent;
+    expect(content.v).toBe(1);
+  });
+
+  it('tolerates a legacy envelope without v (records v as null)', async () => {
+    const watcher = new DiagnosticWatcher();
+    const { recorded } = await collectWatcherEntries(watcher);
+    cleanup = () => watcher.cleanup();
+
+    // Simulate an already-published emitter that predates schema versioning:
+    // register the channel (so the watcher auto-subscribes), then publish a raw
+    // envelope with no `v` field directly on it.
+    const channel = getChannel('legacy', 'event');
+    channel.publish({
+      ts: Date.now(),
+      lib: 'legacy',
+      event: 'event',
+      payload: { ok: true },
+    });
+
+    expect(recorded).toHaveLength(1);
+    const content = recorded[0]?.content as DiagnosticEntryContent;
+    expect(content.lib).toBe('legacy');
+    expect(content.v).toBeNull();
+  });
+
+  it('isDiagnosticEvent accepts envelopes with and without v', () => {
+    const base = { ts: 1, lib: 'a', event: 'b', payload: {} };
+    expect(isDiagnosticEvent(base)).toBe(true);
+    expect(isDiagnosticEvent({ ...base, v: 1 })).toBe(true);
+    // A malformed v (non-number) is rejected.
+    expect(isDiagnosticEvent({ ...base, v: 'nope' })).toBe(false);
+  });
+
+  it('buildDiagnosticEntry maps v through, defaulting absent v to null', () => {
+    const withV = buildDiagnosticEntry({ v: 2, ts: 1, lib: 'a', event: 'b', payload: {} });
+    expect((withV.content as DiagnosticEntryContent).v).toBe(2);
+    const withoutV = buildDiagnosticEntry({ ts: 1, lib: 'a', event: 'b', payload: {} });
+    expect((withoutV.content as DiagnosticEntryContent).v).toBeNull();
   });
 
   it('cleanup() unsubscribes so later events are ignored', async () => {
