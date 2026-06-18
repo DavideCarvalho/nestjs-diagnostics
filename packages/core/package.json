@@ -20,6 +20,17 @@
     }
   },
   "files": ["dist/", "README.md", "CHANGELOG.md"],
+  "//sideEffects": "NOT false: registry.ts and context-accessor.ts register process-global state on globalThis via Symbol.for AT IMPORT TIME (the cross-copy-stable channel registry + context accessor), and channel.ts/trace.ts register a reset hook at module load. A bundler told sideEffects:false could tree-shake these initializers away, breaking cross-copy global stability. The array lists exactly the side-effectful modules (matching both src and published dist paths); pure modules (index, types) stay tree-shakeable.",
+  "sideEffects": [
+    "**/registry.js",
+    "**/registry.ts",
+    "**/context-accessor.js",
+    "**/context-accessor.ts",
+    "**/channel.js",
+    "**/channel.ts",
+    "**/trace.js",
+    "**/trace.ts"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "vitest run --passWithNoTests",

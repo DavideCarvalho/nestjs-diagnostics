@@ -15,6 +15,11 @@ export const DIAGNOSTIC_ENTRY_TYPE = 'diagnostic';
  * preserved verbatim under `payload`.
  */
 export interface DiagnosticEntryContent {
+  /**
+   * Envelope schema version the producer stamped, or `null` for a legacy
+   * envelope published before schema versioning existed.
+   */
+  v: number | null;
   /** The emitting library, e.g. `'billing'`. */
   lib: string;
   /** The event within that library, e.g. `'invoice-paid'`. */
@@ -95,6 +100,8 @@ export class DiagnosticWatcher implements Watcher {
 /** Map a {@link DiagnosticEvent} envelope to a Telescope `RecordInput`. */
 export function buildDiagnosticEntry(msg: DiagnosticEvent): RecordInput<DiagnosticEntryContent> {
   const content: DiagnosticEntryContent = {
+    // Tolerate envelopes from emitters that predate schema versioning.
+    v: msg.v ?? null,
     lib: msg.lib,
     event: msg.event,
     ts: msg.ts,
@@ -123,6 +130,8 @@ export function isDiagnosticEvent(msg: unknown): msg is DiagnosticEvent {
     typeof m.lib === 'string' &&
     typeof m.event === 'string' &&
     'payload' in m &&
-    (m.traceId === undefined || typeof m.traceId === 'string')
+    (m.traceId === undefined || typeof m.traceId === 'string') &&
+    // Tolerate legacy envelopes without `v`; reject a malformed (non-number) one.
+    (m.v === undefined || typeof m.v === 'number')
   );
 }

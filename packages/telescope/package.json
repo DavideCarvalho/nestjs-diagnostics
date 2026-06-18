@@ -20,6 +20,8 @@
     }
   },
   "files": ["dist/", "README.md", "CHANGELOG.md"],
+  "//sideEffects": "Safe to be false: this package has NO module-level side effects. The watcher subscribes to diagnostics channels only inside register() at runtime, never at import time, and the rest are pure declarations/exports. Enables tree-shaking for consumers.",
+  "sideEffects": false,
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "vitest run --passWithNoTests",
