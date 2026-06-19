@@ -17,7 +17,22 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "default": "./dist/index.js"
+    },
+    "./nestjs": {
+      "types": "./dist/nestjs/index.d.ts",
+      "import": "./dist/nestjs/index.js",
+      "default": "./dist/nestjs/index.js"
     }
+  },
+  "peerDependencies": {
+    "@nestjs/common": "^10 || ^11",
+    "@nestjs/core": "^10 || ^11",
+    "reflect-metadata": "^0.2"
+  },
+  "peerDependenciesMeta": {
+    "@nestjs/common": { "optional": true },
+    "@nestjs/core": { "optional": true },
+    "reflect-metadata": { "optional": true }
   },
   "files": ["dist/", "README.md", "CHANGELOG.md"],
   "//sideEffects": "NOT false: registry.ts and context-accessor.ts register process-global state on globalThis via Symbol.for AT IMPORT TIME (the cross-copy-stable channel registry + context accessor), and channel.ts/trace.ts register a reset hook at module load. A bundler told sideEffects:false could tree-shake these initializers away, breaking cross-copy global stability. The array lists exactly the side-effectful modules (matching both src and published dist paths); pure modules (index, types) stay tree-shakeable.",
@@ -38,8 +53,13 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
+    "@nestjs/common": "^11",
+    "@nestjs/core": "^11",
+    "@nestjs/testing": "^11",
     "@types/node": "^20.0.0",
+    "reflect-metadata": "^0.2",
     "typescript": "^5.4.0",
+    "unplugin-swc": "^1.5.1",
     "vitest": "^3.0.0"
   },
   "engines": {
