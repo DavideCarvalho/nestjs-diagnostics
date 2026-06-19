@@ -95,35 +95,36 @@ describe('createDiagnosticsRedisRelay', () => {
     expect(local).not.toHaveBeenCalled();
   });
 
-  it('round-trips between two processes exactly once, with no loop', () => {
+  it('round-trips an event through Redis without looping back', () => {
     const hub = new FakeHub();
+    const relayPub = new FakeRedis(hub);
     teardowns.push(
       createDiagnosticsRedisRelay({
-        pub: new FakeRedis(hub),
+        pub: relayPub,
         sub: new FakeRedis(hub),
         libs: ['resilience'],
         nodeId: 'A',
       }),
     );
-    const bPub = new FakeRedis(hub);
-    teardowns.push(
-      createDiagnosticsRedisRelay({
-        pub: bPub,
-        sub: new FakeRedis(hub),
-        libs: ['resilience'],
-        nodeId: 'B',
-      }),
-    );
-    const onB = vi.fn();
-    getChannel('resilience', 'circuit-opened').subscribe(() => onB());
+    const onLocal = vi.fn();
+    getChannel('resilience', 'circuit-opened').subscribe(() => onLocal());
 
-    const beforeB = bPub.publishCount;
+    // local emit forwards once to Redis and fires the local subscriber once
     emit('resilience', 'circuit-opened', { key: 'p' });
+    expect(relayPub.publishCount).toBe(1);
+    expect(onLocal).toHaveBeenCalledTimes(1);
 
-    // B's local subscriber fired exactly once (delivered cross-process)...
-    expect(onB).toHaveBeenCalledTimes(1);
-    // ...and B did NOT re-forward the re-emitted event back to Redis (loop guard held).
-    expect(bPub.publishCount).toBe(beforeB);
+    // the same event arriving from ANOTHER node (relabelled) is re-emitted locally once...
+    const env: DiagnosticEvent = {
+      ts: 1,
+      lib: 'resilience',
+      event: 'circuit-opened',
+      payload: { key: 'p' },
+    };
+    new FakeRedis(hub).publish(RELAY_CHANNEL, JSON.stringify({ node: 'B', env }));
+    expect(onLocal).toHaveBeenCalledTimes(2);
+    // ...and the re-emit is NOT forwarded back to Redis (loop guard held)
+    expect(relayPub.publishCount).toBe(1);
   });
 
   it('honors exact channel selection and dotted event names', () => {
@@ -181,18 +182,22 @@ describe('createDiagnosticsRedisRelay', () => {
 
   it('stops forwarding and receiving after teardown', () => {
     const hub = new FakeHub();
-    const seen = hubCapture(hub);
+    const relayPub = new FakeRedis(hub);
     const teardown = createDiagnosticsRedisRelay({
-      pub: new FakeRedis(hub),
+      pub: relayPub,
       sub: new FakeRedis(hub),
       libs: ['resilience'],
       nodeId: 'A',
     });
-    const local = vi.fn();
-    getChannel('resilience', 'circuit-opened').subscribe(() => local());
 
     teardown();
-    emit('resilience', 'circuit-opened', { key: 'p' });
+
+    emit('resilience', 'circuit-opened', { key: 'p' }); // no longer forwarded
+    expect(relayPub.publishCount).toBe(0);
+
+    // an incoming Redis message is no longer received/re-emitted
+    const onLocal = vi.fn();
+    getChannel('resilience', 'circuit-opened').subscribe(() => onLocal());
     new FakeRedis(hub).publish(
       RELAY_CHANNEL,
       JSON.stringify({
@@ -200,8 +205,6 @@ describe('createDiagnosticsRedisRelay', () => {
         env: { ts: 1, lib: 'resilience', event: 'circuit-opened', payload: {} },
       }),
     );
-
-    expect(seen).toHaveLength(0);
-    expect(local).not.toHaveBeenCalled();
+    expect(onLocal).not.toHaveBeenCalled();
   });
 });

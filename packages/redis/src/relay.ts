@@ -41,14 +41,6 @@ export interface DiagnosticsRedisRelayOptions {
 
 const DEFAULT_REDIS_CHANNEL = 'aviary:diagnostics:relay';
 
-/** Process-wide guard: the set of envelope objects currently being re-emitted from Redis onto the
- *  local bus. Keyed by object identity (WeakSet). When ANY relay's onMessage re-publishes an
- *  envelope, every other relay's forward subscriber sees it in this set and skips forwarding it back
- *  to Redis — preventing loops even between two relay instances in the same process (test scenario).
- *  Entries are added immediately before channel.publish(env) and removed in the finally block, so the
- *  guard is active only for the synchronous duration of the re-emit. */
-const reEmitting = new WeakSet<object>();
-
 /** Strip the `aviary:` prefix and split on the FIRST colon — the event segment may contain dots
  *  (e.g. `durable:run.failed`), but the lib/event boundary is the first colon after the prefix. */
 function parseChannelName(name: string): ChannelRef | null {
@@ -79,15 +71,11 @@ export function createDiagnosticsRedisRelay(options: DiagnosticsRedisRelayOption
 
   const subscriptions: Array<{ ref: ChannelRef; listener: (msg: unknown) => void }> = [];
   const subscribed = new Set<string>();
+  const reEmitting = new WeakSet<object>();
 
   const forward = (msg: unknown): void => {
     if (typeof msg !== 'object' || msg === null) return;
     if (reEmitting.has(msg)) return; // a re-emitted remote event — do not send it back
-    // Add msg to reEmitting BEFORE publishing so that, in single-process test scenarios where
-    // multiple relay instances share the same diagnostics_channel, the other relay instances'
-    // forward subscribers skip this same envelope object and don't double-publish it. The WeakSet
-    // entry is held for the lifetime of msg (GC-eligible once no other references remain).
-    reEmitting.add(msg);
     try {
       pub.publish(redisChannel, JSON.stringify({ node: nodeId, env: msg }));
     } catch {
