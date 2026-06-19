@@ -98,6 +98,40 @@ watcher records every diagnostic event in the Telescope dashboard.
 | `CONTEXT_ACCESSOR` | Shared DI token for the optional context accessor. |
 | `DiagnosticEvent`, `EmitOptions`, `ContextAccessor` | Types. |
 
+## Reacting to events in NestJS — `@OnDiagnostic`
+
+The `@dudousxd/nestjs-diagnostics/nestjs` subpath adds an ergonomic way to react
+to any `aviary:<lib>:<event>` in a NestJS app — no extra event library. Register
+the module once, then decorate provider methods:
+
+```ts
+import { Module } from '@nestjs/common';
+import { DiagnosticsModule } from '@dudousxd/nestjs-diagnostics/nestjs';
+
+@Module({ imports: [DiagnosticsModule.forRoot()] })
+export class AppModule {}
+```
+
+```ts
+import { Injectable } from '@nestjs/common';
+import { OnDiagnostic } from '@dudousxd/nestjs-diagnostics/nestjs';
+import type { DiagnosticEvent } from '@dudousxd/nestjs-diagnostics';
+
+@Injectable()
+export class Reactions {
+  @OnDiagnostic('resilience', 'circuit-opened') // one exact channel
+  onCircuitOpen(e: DiagnosticEvent) { /* … */ }
+
+  @OnDiagnostic('resilience')                   // every aviary:resilience:* channel
+  onAnyResilience(e: DiagnosticEvent) { /* … */ }
+}
+```
+
+A handler runs on the DI-resolved instance (injected dependencies work). A
+handler that throws or rejects is logged and swallowed — it can never break the
+code that emitted. `@nestjs/common` + `@nestjs/core` are optional peers; the main
+barrel stays framework-agnostic.
+
 ## License
 
 MIT
