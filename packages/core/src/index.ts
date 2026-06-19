@@ -1,3 +1,7 @@
+export { capability } from './capability.js';
+export type { CapabilityOf, CapabilityRegistry } from './capability.js';
+export { InjectCapability } from './inject-capability.js';
+export { assertCapabilityNaming } from './conformance.js';
 export { CHANNEL_PREFIX, channelName, emit, getChannel, SCHEMA_VERSION } from './channel.js';
 export {
   CONTEXT_ACCESSOR,
