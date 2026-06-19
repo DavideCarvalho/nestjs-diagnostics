@@ -1,4 +1,3 @@
-import { Optional } from '@nestjs/common';
 import { OPTIONAL_DEPS_METADATA, SELF_DECLARED_DEPS_METADATA } from '@nestjs/common/constants';
 import { describe, expect, it } from 'vitest';
 import { capability } from '../src/capability.js';

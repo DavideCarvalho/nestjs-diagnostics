@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { capability } from '../src/capability.js';
+import { CONTEXT_ACCESSOR } from '../src/context-accessor.js';
 
 describe('capability', () => {
   it('builds the canonical @dudousxd/nestjs-<lib>:<name> Symbol.for token', () => {
@@ -13,9 +14,7 @@ describe('capability', () => {
   });
 
   it('matches a token currently hand-rolled in another lib (non-breaking)', () => {
-    // nestjs-authz/durable today declare this by hand; the factory must resolve identical.
-    expect(capability('context', 'accessor')).toBe(
-      Symbol.for('@dudousxd/nestjs-context:accessor'),
-    );
+    // CONTEXT_ACCESSOR is declared by hand in context-accessor.ts; the factory must resolve identical.
+    expect(capability('context', 'accessor')).toBe(CONTEXT_ACCESSOR);
   });
 });

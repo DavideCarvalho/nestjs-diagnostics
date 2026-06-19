@@ -22,4 +22,16 @@ describe('assertCapabilityNaming', () => {
     const tokens = { WRONG: capability('context', 'accessor') };
     expect(() => assertCapabilityNaming('authz', tokens)).toThrowError(/@dudousxd\/nestjs-authz:/);
   });
+
+  it('throws and names the offending export when a token has no description (undefined)', () => {
+    // Symbol('accessor') has a description string 'accessor', NOT undefined.
+    // To get desc === undefined we need Symbol() with no argument.
+    const tokens = { BAD: Symbol() };
+    const fn = () => assertCapabilityNaming('context', tokens);
+    expect(fn).toThrow();
+    const err = (() => { try { fn(); } catch (e) { return e as Error; } })()!;
+    expect(err.message).toMatch(/BAD/);
+    // JSON.stringify(undefined) stringifies to undefined in template literals → the word "undefined"
+    expect(err.message).toContain('undefined');
+  });
 });
