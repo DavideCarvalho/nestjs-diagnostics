@@ -19,7 +19,8 @@ export interface OnDiagnosticMeta {
 export function OnDiagnostic(lib: string, event?: string): MethodDecorator {
   return (target, key) => {
     const existing =
-      (Reflect.getMetadata(ON_DIAGNOSTIC_META, target, key) as OnDiagnosticMeta[] | undefined) ?? [];
+      (Reflect.getMetadata(ON_DIAGNOSTIC_META, target, key) as OnDiagnosticMeta[] | undefined) ??
+      [];
     const meta: OnDiagnosticMeta = { lib, ...(event !== undefined ? { event } : {}) };
     Reflect.defineMetadata(ON_DIAGNOSTIC_META, [...existing, meta], target, key);
   };

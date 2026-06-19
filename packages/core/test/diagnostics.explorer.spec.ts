@@ -39,7 +39,11 @@ describe('DiagnosticsExplorer', () => {
     const r = app.get(Reactions);
     emit('resilience', 'circuit-opened', { key: 'payments' });
     expect(r.exact).toHaveLength(1);
-    expect(r.exact[0]).toMatchObject({ lib: 'resilience', event: 'circuit-opened', payload: { key: 'payments' } });
+    expect(r.exact[0]).toMatchObject({
+      lib: 'resilience',
+      event: 'circuit-opened',
+      payload: { key: 'payments' },
+    });
     await app.close();
   });
 

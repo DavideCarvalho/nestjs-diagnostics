@@ -76,7 +76,11 @@ export class DiagnosticsExplorer implements OnApplicationBootstrap, OnApplicatio
 
   /** Invoke a handler, swallowing sync throws and async rejections so a buggy
    *  reaction can never break the synchronous `emit()` that triggered it. */
-  private safeInvoke(instance: Record<string, unknown>, methodName: string, event: DiagnosticEvent): void {
+  private safeInvoke(
+    instance: Record<string, unknown>,
+    methodName: string,
+    event: DiagnosticEvent,
+  ): void {
     try {
       const fn = instance[methodName] as (e: DiagnosticEvent) => unknown;
       const result = fn.call(instance, event);
