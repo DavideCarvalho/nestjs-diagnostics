@@ -1,5 +1,16 @@
 # @dudousxd/nestjs-diagnostics
 
+## 0.5.0
+
+### Minor Changes
+
+- [`ade4cad`](https://github.com/DavideCarvalho/nestjs-diagnostics/commit/ade4cad4ce96dc1e8a83d136f7f15477cf3183fb) - Add the "capabilities" half of the integration protocol, alongside the existing event transport:
+
+  - `capability(lib, name)` — single canonical source for cross-lib DI token names (`@dudousxd/nestjs-<lib>:<name>` via `Symbol.for`), the mirror of `channelName`.
+  - `CapabilityRegistry` (augmentable via declaration merging) + `CapabilityOf<TLib, TName>` — the typed registry mirroring `ChannelRegistry`/`PayloadOf`.
+  - `InjectCapability(lib, name)` — optional, typed parameter injector equivalent to `@Optional() @Inject(capability(lib, name))`, removing hand-copied magic-string tokens between libraries.
+  - `assertCapabilityNaming(lib, tokens)` — contract-test helper that turns token-naming drift into a failing test.
+
 ## 0.4.0
 
 ### Minor Changes

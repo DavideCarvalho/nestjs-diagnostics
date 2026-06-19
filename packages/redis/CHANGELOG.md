@@ -1,5 +1,12 @@
 # @dudousxd/nestjs-diagnostics-redis
 
+## 0.1.1
+
+### Patch Changes
+
+- Updated dependencies [[`ade4cad`](https://github.com/DavideCarvalho/nestjs-diagnostics/commit/ade4cad4ce96dc1e8a83d136f7f15477cf3183fb)]:
+  - @dudousxd/nestjs-diagnostics@0.5.0
+
 ## 0.1.0
 
 ### Minor Changes
