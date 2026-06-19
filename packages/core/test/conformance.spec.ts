@@ -29,7 +29,13 @@ describe('assertCapabilityNaming', () => {
     const tokens = { BAD: Symbol() };
     const fn = () => assertCapabilityNaming('context', tokens);
     expect(fn).toThrow();
-    const err = (() => { try { fn(); } catch (e) { return e as Error; } })()!;
+    const err = (() => {
+      try {
+        fn();
+      } catch (e) {
+        return e as Error;
+      }
+    })()!;
     expect(err.message).toMatch(/BAD/);
     // JSON.stringify(undefined) stringifies to undefined in template literals → the word "undefined"
     expect(err.message).toContain('undefined');
