@@ -1,6 +1,6 @@
 {
   "name": "@dudousxd/nestjs-diagnostics",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "A standard convention for @dudousxd/nestjs-* libs to emit observability events over node:diagnostics_channel.",
   "license": "MIT",
   "repository": {
@@ -30,9 +30,15 @@
     "reflect-metadata": "^0.2"
   },
   "peerDependenciesMeta": {
-    "@nestjs/common": { "optional": true },
-    "@nestjs/core": { "optional": true },
-    "reflect-metadata": { "optional": true }
+    "@nestjs/common": {
+      "optional": true
+    },
+    "@nestjs/core": {
+      "optional": true
+    },
+    "reflect-metadata": {
+      "optional": true
+    }
   },
   "files": ["dist/", "README.md", "CHANGELOG.md"],
   "//sideEffects": "NOT false: registry.ts and context-accessor.ts register process-global state on globalThis via Symbol.for AT IMPORT TIME (the cross-copy-stable channel registry + context accessor), and channel.ts/trace.ts register a reset hook at module load. A bundler told sideEffects:false could tree-shake these initializers away, breaking cross-copy global stability. The array lists exactly the side-effectful modules (matching both src and published dist paths); pure modules (index, types) stay tree-shakeable.",

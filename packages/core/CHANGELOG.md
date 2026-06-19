@@ -1,5 +1,15 @@
 # @dudousxd/nestjs-diagnostics
 
+## 0.4.0
+
+### Minor Changes
+
+- [`5d035d1`](https://github.com/DavideCarvalho/nestjs-diagnostics/commit/5d035d11263b40b2af1aaa18c1ffc6f03ec66df3) - Add the `@dudousxd/nestjs-diagnostics/nestjs` subpath: `@OnDiagnostic(lib, event?)`,
+  `DiagnosticsModule.forRoot()`, and a `DiscoveryService` explorer that subscribes
+  diagnostics channels to provider methods for ergonomic, DI-friendly in-app
+  reactions. `@nestjs/*` are optional peers; the main barrel stays
+  framework-agnostic.
+
 ## 0.3.0
 
 ### Minor Changes
