@@ -4,6 +4,10 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   plugins: [
     swc.vite({
+      jsc: {
+        parser: { syntax: 'typescript', decorators: true },
+        transform: { legacyDecorator: true, decoratorMetadata: true },
+      },
       module: { type: 'es6' },
     }),
   ],
@@ -12,5 +16,6 @@ export default defineConfig({
     globals: false,
     include: ['test/**/*.{spec,test}.ts'],
     pool: 'forks',
+    setupFiles: ['./test/setup.ts'],
   },
 });
