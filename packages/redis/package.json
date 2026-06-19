@@ -1,0 +1,64 @@
+{
+  "name": "@dudousxd/nestjs-diagnostics-redis",
+  "version": "0.0.0",
+  "description": "Cross-process transport for @dudousxd/nestjs-diagnostics — relay aviary:<lib>:<event> events over Redis pub/sub so @OnDiagnostic handlers fire across processes.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DavideCarvalho/nestjs-diagnostics.git",
+    "directory": "packages/redis"
+  },
+  "author": "Davi Carvalho <davi@goflip.ai>",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": ["dist/", "README.md", "CHANGELOG.md"],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run --passWithNoTests",
+    "test:watch": "vitest",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@dudousxd/nestjs-diagnostics": "workspace:^"
+  },
+  "peerDependencies": {
+    "ioredis": "^5",
+    "@nestjs/common": "^10 || ^11",
+    "@nestjs/core": "^10 || ^11",
+    "reflect-metadata": "^0.2"
+  },
+  "peerDependenciesMeta": {
+    "@nestjs/common": { "optional": true },
+    "@nestjs/core": { "optional": true },
+    "reflect-metadata": { "optional": true }
+  },
+  "devDependencies": {
+    "@nestjs/common": "^11.0.0",
+    "@nestjs/core": "^11.0.0",
+    "@nestjs/testing": "^11.0.0",
+    "@types/node": "^20.0.0",
+    "ioredis": "^5.4.2",
+    "reflect-metadata": "^0.2.2",
+    "typescript": "^5.4.0",
+    "vitest": "^3.0.0"
+  },
+  "engines": { "node": ">=20" },
+  "keywords": [
+    "nestjs",
+    "diagnostics",
+    "diagnostics-channel",
+    "redis",
+    "transport",
+    "cross-process",
+    "aviary"
+  ]
+}
