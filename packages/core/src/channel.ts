@@ -114,6 +114,9 @@ export function emit<TLib extends LibOf, TEvent extends EventOf<TLib>>(
       event,
       traceId,
       payload,
+      // Only set the key when a duration was provided — omitting it keeps the
+      // envelope shape monomorphic (no undefined-valued key on common events).
+      ...(opts?.durationMs !== undefined && { durationMs: opts.durationMs }),
     };
     channel.publish(envelope);
   } catch {

@@ -196,6 +196,24 @@ describe('emit', () => {
     expect(cap.events[0]?.traceId).toBeUndefined();
   });
 
+  it('stamps durationMs on the envelope when opts.durationMs is provided', () => {
+    const cap = capture(channelName('billing', 'invoice-paid'));
+    stop = cap.stop;
+
+    emit('billing', 'invoice-paid', { ok: true }, { durationMs: 42 });
+
+    expect(cap.events[0]?.durationMs).toBe(42);
+  });
+
+  it('leaves durationMs undefined on the envelope when not provided', () => {
+    const cap = capture(channelName('billing', 'invoice-paid'));
+    stop = cap.stop;
+
+    emit('billing', 'invoice-paid', { ok: true });
+
+    expect(cap.events[0]?.durationMs).toBeUndefined();
+  });
+
   it('getChannel returns the memoized node channel for a name', () => {
     const a = getChannel('billing', 'invoice-paid');
     const b = diagnostics_channel.channel('aviary:billing:invoice-paid');

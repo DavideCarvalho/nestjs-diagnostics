@@ -134,6 +134,45 @@ describe('DiagnosticWatcher', () => {
     expect((withoutV.content as DiagnosticEntryContent).v).toBeNull();
   });
 
+  it('carries durationMs from DiagnosticEvent into RecordInput when present', async () => {
+    const watcher = new DiagnosticWatcher();
+    const { recorded } = await collectWatcherEntries(watcher);
+    cleanup = () => watcher.cleanup();
+
+    emit('ai', 'chat-request', { model: 'gpt-4o' }, { durationMs: 7 });
+
+    expect(recorded[0]?.durationMs).toBe(7);
+  });
+
+  it('leaves durationMs undefined on RecordInput when not provided', async () => {
+    const watcher = new DiagnosticWatcher();
+    const { recorded } = await collectWatcherEntries(watcher);
+    cleanup = () => watcher.cleanup();
+
+    emit('ai', 'chat-request', { model: 'gpt-4o' });
+
+    expect(recorded[0]?.durationMs).toBeUndefined();
+  });
+
+  it('buildDiagnosticEntry passes durationMs from envelope to RecordInput', () => {
+    const withDuration = buildDiagnosticEntry({
+      ts: 1,
+      lib: 'ai',
+      event: 'chat-request',
+      payload: {},
+      durationMs: 7,
+    });
+    expect(withDuration.durationMs).toBe(7);
+
+    const withoutDuration = buildDiagnosticEntry({
+      ts: 1,
+      lib: 'ai',
+      event: 'chat-request',
+      payload: {},
+    });
+    expect(withoutDuration.durationMs).toBeUndefined();
+  });
+
   it('cleanup() unsubscribes so later events are ignored', async () => {
     const watcher = new DiagnosticWatcher();
     const { recorded } = await collectWatcherEntries(watcher);

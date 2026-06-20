@@ -118,6 +118,11 @@ export function buildDiagnosticEntry(msg: DiagnosticEvent): RecordInput<Diagnost
       ...(msg.traceId ? [`trace:${msg.traceId}`] : []),
     ],
     content,
+    // Forward the emitter-supplied duration so the OTel exporter can feed it
+    // into a histogram instrument instead of only incrementing a counter.
+    // Only set the key when the envelope carried a duration; omit it otherwise
+    // so the Recorder treats it as "unknown duration" (null after enrichment).
+    ...(msg.durationMs !== undefined && { durationMs: msg.durationMs }),
   };
 }
 
