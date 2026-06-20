@@ -1,5 +1,12 @@
 # @dudousxd/nestjs-diagnostics-redis
 
+## 0.1.2
+
+### Patch Changes
+
+- Updated dependencies [[`16bd3a5`](https://github.com/DavideCarvalho/nestjs-diagnostics/commit/16bd3a5ae975edb8e8b9b8ea59d52e7a9a0b470f)]:
+  - @dudousxd/nestjs-diagnostics@0.6.0
+
 ## 0.1.1
 
 ### Patch Changes
