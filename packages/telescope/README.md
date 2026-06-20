@@ -24,12 +24,18 @@ TelescopeModule.forRoot({
 });
 ```
 
-Then anywhere a library emits:
+Then anywhere a library emits — e.g. from a provider:
 
 ```ts
+import { Injectable } from '@nestjs/common';
 import { emit } from '@dudousxd/nestjs-diagnostics';
 
-emit('billing', 'invoice-paid', { invoiceId: 'inv_123', amount: 4200 });
+@Injectable()
+export class BillingService {
+  async markInvoicePaid(invoiceId: string, amount: number) {
+    emit('billing', 'invoice-paid', { invoiceId, amount });
+  }
+}
 ```
 
 …a `diagnostic` entry lands in Telescope with `content` = the payload, the

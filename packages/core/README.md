@@ -33,10 +33,19 @@ interface DiagnosticEvent<TPayload = unknown> {
 
 ## Emitting
 
+Call `emit` from your provider wherever something interesting happens:
+
 ```ts
+import { Injectable } from '@nestjs/common';
 import { emit } from '@dudousxd/nestjs-diagnostics';
 
-emit('billing', 'invoice-paid', { invoiceId: 'inv_123', amount: 4200 });
+@Injectable()
+export class BillingService {
+  async markInvoicePaid(invoiceId: string, amount: number) {
+    // … your domain logic …
+    emit('billing', 'invoice-paid', { invoiceId, amount });
+  }
+}
 ```
 
 `emit` builds and publishes the envelope **only when the channel has
@@ -44,10 +53,11 @@ subscribers** (`channel.hasSubscribers`), so a production process with no
 observer attached pays essentially nothing per call. It never throws —
 observability must not break the emitting code path.
 
-Need an explicit trace id? Pass it in `opts`:
+Need an explicit trace id? Pass it in `opts` — e.g. inside a handler that
+already holds a correlation id:
 
 ```ts
-emit('billing', 'invoice-paid', payload, { traceId: req.id });
+emit('billing', 'invoice-paid', payload, { traceId });
 ```
 
 ## Trace correlation

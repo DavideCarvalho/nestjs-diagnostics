@@ -46,10 +46,19 @@ interface DiagnosticEvent<TPayload = unknown> {
 
 ## Emit
 
+Call `emit` from your provider wherever something interesting happens:
+
 ```ts
+import { Injectable } from '@nestjs/common';
 import { emit } from '@dudousxd/nestjs-diagnostics';
 
-emit('billing', 'invoice-paid', { invoiceId: 'inv_123', amount: 4200 });
+@Injectable()
+export class BillingService {
+  async markInvoicePaid(invoiceId: string, amount: number) {
+    // … your domain logic …
+    emit('billing', 'invoice-paid', { invoiceId, amount });
+  }
+}
 ```
 
 `emit` builds and publishes the envelope **only when the channel has subscribers** (`channel.hasSubscribers`), so a production process with no observer attached pays essentially nothing per call. It never throws — observability must not break the emitting code path.
