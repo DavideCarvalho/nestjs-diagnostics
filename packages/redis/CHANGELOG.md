@@ -1,5 +1,11 @@
 # @dudousxd/nestjs-diagnostics-redis
 
+## 0.2.0
+
+### Minor Changes
+
+- [`af1dcf1`](https://github.com/DavideCarvalho/nestjs-diagnostics/commit/af1dcf149534b0cc211cd60ac2a470182e71ce44) - Add `DiagnosticsRedisModule.forRootAsync({ imports?, inject?, useFactory })` so the relay's `pub`/`sub` ioredis clients can come from DI instead of a top-level `new Redis(...)`. `forRoot` still works for pre-built connections.
+
 ## 0.1.2
 
 ### Patch Changes
