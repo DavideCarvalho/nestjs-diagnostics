@@ -1,5 +1,16 @@
 # @dudousxd/nestjs-diagnostics-telescope
 
+## 0.4.0
+
+### Minor Changes
+
+- [`16bd3a5`](https://github.com/DavideCarvalho/nestjs-diagnostics/commit/16bd3a5ae975edb8e8b9b8ea59d52e7a9a0b470f) - Diagnostics events can carry an optional `durationMs`. `emit(lib, event, payload, { durationMs })` stamps a wall-clock duration onto the envelope, and the generic Telescope watcher forwards it to the recorded entry's `durationMs`. This lets an observer (e.g. the Telescope OTel exporter) turn an `aviary:<lib>:<event>` stream into a **duration histogram** (p95/p99) instead of only a counter — so latency metrics can move onto the diagnostics→telescope path without losing their distribution.
+
+### Patch Changes
+
+- Updated dependencies [[`16bd3a5`](https://github.com/DavideCarvalho/nestjs-diagnostics/commit/16bd3a5ae975edb8e8b9b8ea59d52e7a9a0b470f)]:
+  - @dudousxd/nestjs-diagnostics@0.6.0
+
 ## 0.3.2
 
 ### Patch Changes
