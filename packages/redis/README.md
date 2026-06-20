@@ -15,20 +15,24 @@ pnpm add @dudousxd/nestjs-diagnostics-redis @dudousxd/nestjs-diagnostics ioredis
 ## Use (Nest)
 
 Supply your own ioredis connections — a publisher and a **separate** subscriber (`redis.duplicate()`,
-since a subscribed connection can't publish):
+since a subscribed connection can't publish). Use `forRootAsync` to pull your Redis client from DI:
 
 ```ts
-import Redis from 'ioredis';
+import type Redis from 'ioredis';
+import { Module } from '@nestjs/common';
 import { DiagnosticsRedisModule } from '@dudousxd/nestjs-diagnostics-redis';
-
-const redis = new Redis(process.env.REDIS_URL);
+import { REDIS, RedisModule } from './redis.module'; // your app's Redis provider
 
 @Module({
   imports: [
-    DiagnosticsRedisModule.forRoot({
-      pub: redis,
-      sub: redis.duplicate(),
-      libs: ['durable', 'notifications'], // forward all events of these libs
+    DiagnosticsRedisModule.forRootAsync({
+      imports: [RedisModule],
+      inject: [REDIS],
+      useFactory: (redis: Redis) => ({
+        pub: redis,
+        sub: redis.duplicate(),
+        libs: ['durable', 'notifications'], // forward all events of these libs
+      }),
     }),
   ],
 })
@@ -37,6 +41,9 @@ export class AppModule {}
 
 Now an `@OnDiagnostic('durable', 'run.failed')` handler in **another** process fires when a worker
 elsewhere emits it.
+
+Already holding the connections? The static `forRoot({ pub, sub, libs })` takes them directly — but
+prefer `forRootAsync` so the relay's clients come from the same DI container as the rest of your app.
 
 ## Use (manual)
 

@@ -1,3 +1,4 @@
+import { Module } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -50,5 +51,32 @@ describe('DiagnosticsRedisModule', () => {
     expect(teardownSpy).not.toHaveBeenCalled();
     await moduleRef.close();
     expect(teardownSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('forRootAsync builds options from injected dependencies', async () => {
+    const REDIS = Symbol('redis');
+    @Module({ providers: [{ provide: REDIS, useValue: fakeClient }], exports: [REDIS] })
+    class RedisTestModule {}
+
+    const moduleRef = await Test.createTestingModule({
+      imports: [
+        DiagnosticsRedisModule.forRootAsync({
+          imports: [RedisTestModule],
+          inject: [REDIS],
+          useFactory: (redis: typeof fakeClient) => ({ pub: redis, sub: redis, libs: ['durable'] }),
+        }),
+      ],
+    }).compile();
+    await moduleRef.init();
+    try {
+      expect(relayFactory).toHaveBeenCalledTimes(1);
+      expect(relayFactory).toHaveBeenCalledWith({
+        pub: fakeClient,
+        sub: fakeClient,
+        libs: ['durable'],
+      });
+    } finally {
+      await moduleRef.close();
+    }
   });
 });
