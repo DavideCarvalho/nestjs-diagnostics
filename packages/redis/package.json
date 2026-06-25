@@ -19,7 +19,7 @@
       "default": "./dist/index.js"
     }
   },
-  "files": ["dist/", "README.md", "CHANGELOG.md"],
+  "files": ["dist/", "README.md", "CHANGELOG.md", "skills"],
   "sideEffects": false,
   "scripts": {
     "build": "tsc -p tsconfig.json",
@@ -67,6 +67,7 @@
     "redis",
     "transport",
     "cross-process",
-    "aviary"
+    "aviary",
+    "tanstack-intent"
   ]
 }

@@ -1,0 +1,102 @@
+# Domain map for nestjs-diagnostics (TanStack Intent skill scaffolding)
+# Produced autonomously from README, package READMEs, docs/, and source.
+# ONE domain map for the whole monorepo.
+
+library: nestjs-diagnostics
+repo: https://github.com/DavideCarvalho/nestjs-diagnostics
+summary: >
+  A standard convention for @dudousxd/nestjs-* libraries to emit observability
+  events over Node's built-in node:diagnostics_channel, with zero overhead when
+  nobody is listening and no coupling to any one consumer. A process-global
+  channel registry enables wildcard-style discovery; a single generic Telescope
+  watcher records every event; an optional Redis relay carries events across
+  processes. Also carries the "capabilities" half of the ecosystem protocol:
+  shared DI tokens two libs resolve without importing each other.
+
+packages:
+  - name: "@dudousxd/nestjs-diagnostics"
+    dir: packages/core
+    version: 0.6.0
+    private: false
+    role: primary client-facing (the core convention; framework-agnostic barrel + /nestjs subpath)
+    entrypoints:
+      - "."        # emit, trace, registry, channel, capability, conformance, context-accessor, types
+      - "./nestjs" # DiagnosticsModule, OnDiagnostic, DiagnosticsExplorer, InjectCapability
+  - name: "@dudousxd/nestjs-diagnostics-redis"
+    dir: packages/redis
+    version: 0.1.2
+    private: false
+    role: primary client-facing (cross-process transport)
+    entrypoints: ["."]
+  - name: "@dudousxd/nestjs-diagnostics-telescope"
+    dir: packages/telescope
+    version: 0.4.0
+    private: false
+    role: primary client-facing (Telescope extension / generic watcher)
+    entrypoints: ["."]
+
+# All three packages are public and consumer-facing; all received skills.
+
+concepts:
+  - id: envelope
+    name: DiagnosticEvent envelope
+    summary: Wire contract v/ts/lib/event/traceId/payload/durationMs over aviary:<lib>:<event>.
+    source: packages/core/src/types.ts, packages/core/src/channel.ts
+  - id: emit
+    name: emit(lib, event, payload, opts)
+    summary: Zero-overhead-when-unsubscribed point publish; never throws; EmitOptions sample/traceId/durationMs.
+    source: packages/core/src/channel.ts
+  - id: trace
+    name: trace(lib, event, fn, payload, opts) / tracingChannel
+    summary: Span surface — start/end/asyncStart/asyncEnd/error over :<phase> sub-channels with spanId + durationMs.
+    source: packages/core/src/trace.ts
+  - id: registry
+    name: channel registry
+    summary: registeredChannels()/onChannelRegistered()/getChannel() — discovery since diagnostics_channel has no wildcard; Symbol.for global for cross-copy stability; resetRegistry (test-only).
+    source: packages/core/src/registry.ts, packages/core/src/channel.ts
+  - id: typed-registry
+    name: ChannelRegistry declaration merging
+    summary: Opt-in compile-time payload types per channel via LooseString trick; untyped unknown path stays open.
+    source: packages/core/src/types.ts
+  - id: context
+    name: trace correlation
+    summary: setContextAccessor/CONTEXT_ACCESSOR/resolveTraceId — optional structural mirror of nestjs-context accessor auto-fills traceId.
+    source: packages/core/src/context-accessor.ts
+  - id: on-diagnostic
+    name: "@OnDiagnostic decorator + DiagnosticsModule"
+    summary: NestJS reaction surface; exact channel or lib wildcard; runs on DI instance; never-throw isolation (safeInvoke).
+    source: packages/core/src/nestjs/*
+  - id: capabilities
+    name: capability protocol half
+    summary: capability(lib,name) Symbol.for token; InjectCapability optional injection; assertCapabilityNaming drift guard; CapabilityRegistry.
+    source: packages/core/src/capability.ts, inject-capability.ts, conformance.ts
+  - id: redis-relay
+    name: cross-process relay
+    summary: DiagnosticsRedisModule.forRoot/forRootAsync + createDiagnosticsRedisRelay; libs/channels/all selection; separate pub/sub; nodeId loop-safety; JSON payloads.
+    source: packages/redis/src/*
+  - id: telescope
+    name: generic Telescope watcher
+    summary: nestjsDiagnosticsTelescope() extension; one DiagnosticWatcher subscribes all channels; diagnostic entry type + Diagnostics dashboard.
+    source: packages/telescope/src/*
+
+failure_modes:
+  - Building/serializing payloads before emit on hot paths (emit only skips its own envelope, not your pre-work).
+  - Expecting emit/trace to throw, ack, retry, guarantee delivery/ordering/replay (fire-and-forget).
+  - Putting 'aviary:' prefix or colons into lib/event (channelName already builds aviary:<lib>:<event>).
+  - Subscribing to base channel for span events (phases ride :start/:end/... sub-channels).
+  - onChannelRegistered alone without registeredChannels() replay (no history replay).
+  - Wildcard channel name strings (diagnostics_channel has no pattern subscription).
+  - @OnDiagnostic without DiagnosticsModule.forRoot() (decorator only records metadata).
+  - Throwing in handlers expecting retry (safeInvoke swallows/logs).
+  - Reusing one ioredis connection for pub and sub (subscriber mode can't publish).
+  - Reading methods/Date on cross-process payloads (arrive as plain JSON).
+  - Symbol() instead of capability()/Symbol.for for shared tokens.
+  - Passing nestjsDiagnosticsTelescope (uncalled) or a string as a Telescope extension.
+
+gaps:
+  # What a maintainer interview would have surfaced but could not be confirmed autonomously.
+  - Maintainer priority ranking among the skills (which patterns AI agents most get wrong in practice) is assumed, not confirmed; gh issue search returned nothing accessible.
+  - Real downstream lib/event catalogs (durable, notifications, resilience, authz, billing) are used illustratively from README/docs; exact event names of sibling libs are not authoritative here.
+  - No tests directory was present in packages to mine real-world usage snippets; examples are grounded in source signatures + READMEs.
+  - The @dudousxd/nestjs-telescope extension surface (TelescopeExtension, Watcher, DataProvider, DashboardSpec) is treated as a stable peer API from imports; its own version-specific contract was not independently verified.
+  - Production heuristics (e.g. recommended sample rates, when to prefer trace vs emit, retention of telescope entries) are not documented in-repo and were left out rather than guessed.
