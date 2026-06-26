@@ -1,0 +1,46 @@
+# Skill tree for nestjs-diagnostics — FLAT structure, no router skill.
+# Each skill lives at packages/<pkg>/skills/<skill>/SKILL.md.
+
+structure: flat
+skills:
+  - name: emit-diagnostics
+    package: "@dudousxd/nestjs-diagnostics"
+    path: packages/core/skills/emit-diagnostics/SKILL.md
+    type: core
+    covers: [emit, EmitOptions, DiagnosticEvent envelope, ChannelRegistry typed merge, setContextAccessor/CONTEXT_ACCESSOR, hasSubscribers gating]
+
+  - name: trace-spans
+    package: "@dudousxd/nestjs-diagnostics"
+    path: packages/core/skills/trace-spans/SKILL.md
+    type: core
+    covers: [trace, tracingChannel, SpanEvent, SpanPhase, traceChannelNames, SPAN_SCHEMA_VERSION]
+
+  - name: observe-channels
+    package: "@dudousxd/nestjs-diagnostics"
+    path: packages/core/skills/observe-channels/SKILL.md
+    type: core
+    covers: [registeredChannels, onChannelRegistered, getChannel, channelName, CHANNEL_PREFIX, resetRegistry, custom consumers]
+
+  - name: react-with-on-diagnostic
+    package: "@dudousxd/nestjs-diagnostics"
+    path: packages/core/skills/react-with-on-diagnostic/SKILL.md
+    type: core
+    covers: [DiagnosticsModule.forRoot, OnDiagnostic, DiagnosticsExplorer, never-throw isolation, wildcard vs exact]
+
+  - name: capabilities
+    package: "@dudousxd/nestjs-diagnostics"
+    path: packages/core/skills/capabilities/SKILL.md
+    type: core
+    covers: [capability, InjectCapability, assertCapabilityNaming, CapabilityRegistry, CapabilityOf]
+
+  - name: redis-transport
+    package: "@dudousxd/nestjs-diagnostics-redis"
+    path: packages/redis/skills/redis-transport/SKILL.md
+    type: core
+    covers: [DiagnosticsRedisModule.forRoot/forRootAsync, createDiagnosticsRedisRelay, libs/channels/all, pub/sub duplicate, nodeId loop-safety, JSON payloads]
+
+  - name: telescope-watcher
+    package: "@dudousxd/nestjs-diagnostics-telescope"
+    path: packages/telescope/skills/telescope-watcher/SKILL.md
+    type: core
+    covers: [nestjsDiagnosticsTelescope, DiagnosticWatcher, DIAGNOSTIC_ENTRY_TYPE, buildDiagnosticEntry, isDiagnosticEvent, dashboard/dataProviders]
