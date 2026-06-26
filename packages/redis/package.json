@@ -1,6 +1,6 @@
 {
   "name": "@dudousxd/nestjs-diagnostics-redis",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Cross-process transport for @dudousxd/nestjs-diagnostics — relay aviary:<lib>:<event> events over Redis pub/sub so @OnDiagnostic handlers fire across processes.",
   "license": "MIT",
   "repository": {

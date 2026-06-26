@@ -1,5 +1,11 @@
 # @dudousxd/nestjs-diagnostics
 
+## 0.6.1
+
+### Patch Changes
+
+- [#14](https://github.com/DavideCarvalho/nestjs-diagnostics/pull/14) [`cced7fc`](https://github.com/DavideCarvalho/nestjs-diagnostics/commit/cced7fc843c84eaf7b51686321294355bf2dd346) Thanks [@DavideCarvalho](https://github.com/DavideCarvalho)! - Ship TanStack Intent agent skills (SKILL.md) inside the package.
+
 ## 0.6.0
 
 ### Minor Changes
