@@ -1,5 +1,14 @@
 # @dudousxd/nestjs-diagnostics-telescope
 
+## 0.4.1
+
+### Patch Changes
+
+- [#14](https://github.com/DavideCarvalho/nestjs-diagnostics/pull/14) [`cced7fc`](https://github.com/DavideCarvalho/nestjs-diagnostics/commit/cced7fc843c84eaf7b51686321294355bf2dd346) Thanks [@DavideCarvalho](https://github.com/DavideCarvalho)! - Ship TanStack Intent agent skills (SKILL.md) inside the package.
+
+- Updated dependencies [[`cced7fc`](https://github.com/DavideCarvalho/nestjs-diagnostics/commit/cced7fc843c84eaf7b51686321294355bf2dd346)]:
+  - @dudousxd/nestjs-diagnostics@0.6.1
+
 ## 0.4.0
 
 ### Minor Changes
