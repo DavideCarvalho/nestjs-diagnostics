@@ -1,5 +1,25 @@
 # @dudousxd/nestjs-diagnostics-telescope
 
+## 0.5.0
+
+### Minor Changes
+
+- [#16](https://github.com/DavideCarvalho/nestjs-diagnostics/pull/16) [`3183b6a`](https://github.com/DavideCarvalho/nestjs-diagnostics/commit/3183b6abbfc3d17f8b85bf62d783099983e2d063) Thanks [@DavideCarvalho](https://github.com/DavideCarvalho)! - Enrich the Diagnostics dashboard: add an "Events captured" stat and a "By
+  library" top-N, and give the Recent events table a time + duration column plus a
+  deep-link from each event's trace id straight to the Telescope Traces page — so a
+  diagnostic event jumps to the request it was emitted from. New `diagnostics.count`
+  and `diagnostics.byLib` data providers back the additions.
+
+### Patch Changes
+
+- [#16](https://github.com/DavideCarvalho/nestjs-diagnostics/pull/16) [`540ef8a`](https://github.com/DavideCarvalho/nestjs-diagnostics/commit/540ef8aca15c3c5070088cad1c7777862fc612b7) Thanks [@DavideCarvalho](https://github.com/DavideCarvalho)! - Fix the Diagnostics dashboard rendering empty: the extension `name` was
+  `nestjs-diagnostics`, but its dashboard id (`diagnostics.diagnostics`) and data
+  providers (`diagnostics.*`) use the `diagnostics` namespace. Telescope's
+  controller scopes each panel fetch to `/ext/<dashboard-prefix>/data/<provider>`
+  and 404s unless the provider's owning extension name equals that prefix, so
+  every panel failed with "Unknown data provider". The extension is now named
+  `diagnostics` to match.
+
 ## 0.4.1
 
 ### Patch Changes
