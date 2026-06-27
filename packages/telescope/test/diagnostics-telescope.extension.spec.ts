@@ -48,7 +48,10 @@ async function makeCtx(): Promise<{ ctx: ExtensionContext; storage: InMemoryStor
 describe('nestjsDiagnosticsTelescope extension', () => {
   it('contributes one generic watcher, an entry type, a dashboard and providers', () => {
     const ext = nestjsDiagnosticsTelescope();
-    expect(ext.name).toBe('nestjs-diagnostics');
+    // The name must be the 'diagnostics' namespace — equal to the dashboard-id
+    // prefix and the provider-name prefix — or Telescope's per-provider ownership
+    // check 404s every panel (see the comment on `name` in the extension).
+    expect(ext.name).toBe('diagnostics');
 
     const fakeCtx = {} as ExtensionContext;
     expect(ext.watchers?.(fakeCtx).map((w) => w.type)).toEqual(['diagnostic']);
@@ -60,10 +63,15 @@ describe('nestjsDiagnosticsTelescope extension', () => {
     expect(dashboards.map((d) => d.id)).toEqual(['diagnostics.diagnostics']);
     expect(dashboards[0]?.panels.map((p) => p.kind)).toEqual(['topN', 'table']);
 
-    expect(ext.dataProviders?.(fakeCtx).map((p) => p.name)).toEqual([
-      'diagnostics.topEvents',
-      'diagnostics.recentEvents',
-    ]);
+    const providerNames = ext.dataProviders?.(fakeCtx).map((p) => p.name) ?? [];
+    expect(providerNames).toEqual(['diagnostics.topEvents', 'diagnostics.recentEvents']);
+    // Invariant the 404 bug violated: every provider is owned by the namespace the
+    // UI derives from the dashboard id (dashboardId.split('.')[0]).
+    const navPrefix = (dashboards[0]?.id ?? '').split('.')[0];
+    expect(navPrefix).toBe(ext.name);
+    for (const name of providerNames) {
+      expect(name.split('.')[0]).toBe(ext.name);
+    }
   });
 
   it('topEvents provider ranks lib:event pairs by count', async () => {

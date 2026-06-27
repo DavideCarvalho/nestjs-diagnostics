@@ -51,7 +51,14 @@ export function nestjsDiagnosticsTelescope(
   const recentLimit = options.recentLimit ?? 50;
 
   return {
-    name: 'nestjs-diagnostics',
+    // The extension name MUST equal the prefix of the dashboard id and of every
+    // data-provider name ('diagnostics.*'). Telescope's controller scopes each
+    // panel fetch as `GET /ext/<prefix>/data/<provider>` where `<prefix>` is the
+    // dashboard id before the first dot ('diagnostics'), and rejects the request
+    // (404 "Unknown data provider") unless `providerOwner(provider) === <prefix>`.
+    // A mismatched name ('nestjs-diagnostics') made every panel 404 — the whole
+    // Diagnostics dashboard rendered empty.
+    name: 'diagnostics',
 
     watchers(): Watcher[] {
       return [new DiagnosticWatcher()];
