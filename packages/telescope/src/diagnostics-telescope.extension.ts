@@ -18,6 +18,8 @@ import {
 /** Provider names the dashboard panels bind to (namespaced to avoid collisions). */
 const TOP_EVENTS_PROVIDER = 'diagnostics.topEvents';
 const RECENT_EVENTS_PROVIDER = 'diagnostics.recentEvents';
+const COUNT_PROVIDER = 'diagnostics.count';
+const BY_LIB_PROVIDER = 'diagnostics.byLib';
 
 /** Options for {@link nestjsDiagnosticsTelescope}. */
 export interface DiagnosticsTelescopeOptions {
@@ -76,9 +78,21 @@ export function nestjsDiagnosticsTelescope(
           navGroup: 'Observability',
           panels: [
             {
+              kind: 'stat',
+              title: 'Events captured',
+              data: { provider: COUNT_PROVIDER },
+              format: 'number',
+            },
+            {
               kind: 'topN',
               title: 'Busiest events',
               data: { provider: TOP_EVENTS_PROVIDER, query: { limit: topEventsLimit } },
+              limit: topEventsLimit,
+            },
+            {
+              kind: 'topN',
+              title: 'By library',
+              data: { provider: BY_LIB_PROVIDER, query: { limit: topEventsLimit } },
               limit: topEventsLimit,
             },
             {
@@ -86,9 +100,14 @@ export function nestjsDiagnosticsTelescope(
               title: 'Recent events',
               data: { provider: RECENT_EVENTS_PROVIDER, query: { limit: recentLimit } },
               columns: [
+                { key: 'time', label: 'Time' },
                 { key: 'lib', label: 'Library' },
                 { key: 'event', label: 'Event' },
-                { key: 'traceId', label: 'Trace' },
+                { key: 'durationMs', label: 'ms' },
+                // Deep-link to the Traces page so a diagnostic event jumps straight
+                // to the request/trace it was emitted from. Empty traceId renders as
+                // plain text via the {traceId} template collapsing to the list route.
+                { key: 'traceId', label: 'Trace', link: { href: '#/traces/{traceId}' } },
               ],
             },
           ],
@@ -98,6 +117,31 @@ export function nestjsDiagnosticsTelescope(
 
     dataProviders(): DataProvider[] {
       return [
+        {
+          name: COUNT_PROVIDER,
+          async resolve(_query, ctx) {
+            const entries = await loadDiagnostics(ctx, 5_000);
+            return { value: entries.length };
+          },
+        },
+        {
+          name: BY_LIB_PROVIDER,
+          async resolve(query, ctx) {
+            const limit = numberOr(query?.limit, topEventsLimit);
+            const entries = await loadDiagnostics(ctx, 5_000);
+            const counts = new Map<string, number>();
+            for (const entry of entries) {
+              const content = entry.content as DiagnosticEntryContent | null;
+              if (!content) continue;
+              counts.set(content.lib, (counts.get(content.lib) ?? 0) + 1);
+            }
+            const items = [...counts.entries()]
+              .map(([label, value]) => ({ label, value }))
+              .sort((a, b) => b.value - a.value)
+              .slice(0, limit);
+            return { items };
+          },
+        },
         {
           name: TOP_EVENTS_PROVIDER,
           async resolve(query, ctx) {
@@ -125,8 +169,10 @@ export function nestjsDiagnosticsTelescope(
             const rows = entries.map((entry) => {
               const content = entry.content as DiagnosticEntryContent | null;
               return {
+                time: formatTime(content?.ts),
                 lib: content?.lib ?? null,
                 event: content?.event ?? null,
+                durationMs: entry.durationMs ?? null,
                 traceId: content?.traceId ?? null,
               };
             });
@@ -147,6 +193,12 @@ async function loadDiagnostics(ctx: ExtensionContext, limit = 200): Promise<Entr
 
 function numberOr(value: unknown, fallback: number): number {
   return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+}
+
+/** Format a producer epoch-ms timestamp as a compact UTC `HH:mm:ss`, or '' when absent. */
+function formatTime(ts: number | undefined): string {
+  if (typeof ts !== 'number' || !Number.isFinite(ts)) return '';
+  return new Date(ts).toISOString().slice(11, 19);
 }
 
 export default nestjsDiagnosticsTelescope;

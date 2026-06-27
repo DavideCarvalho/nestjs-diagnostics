@@ -61,10 +61,15 @@ describe('nestjsDiagnosticsTelescope extension', () => {
 
     const dashboards = ext.dashboards?.(fakeCtx) ?? [];
     expect(dashboards.map((d) => d.id)).toEqual(['diagnostics.diagnostics']);
-    expect(dashboards[0]?.panels.map((p) => p.kind)).toEqual(['topN', 'table']);
+    expect(dashboards[0]?.panels.map((p) => p.kind)).toEqual(['stat', 'topN', 'topN', 'table']);
 
     const providerNames = ext.dataProviders?.(fakeCtx).map((p) => p.name) ?? [];
-    expect(providerNames).toEqual(['diagnostics.topEvents', 'diagnostics.recentEvents']);
+    expect(providerNames).toEqual([
+      'diagnostics.count',
+      'diagnostics.byLib',
+      'diagnostics.topEvents',
+      'diagnostics.recentEvents',
+    ]);
     // Invariant the 404 bug violated: every provider is owned by the namespace the
     // UI derives from the dashboard id (dashboardId.split('.')[0]).
     const navPrefix = (dashboards[0]?.id ?? '').split('.')[0];
@@ -112,6 +117,39 @@ describe('nestjsDiagnosticsTelescope extension', () => {
       .find((p) => p.name === 'diagnostics.recentEvents');
     const result = (await provider?.resolve({}, ctx)) as { rows: Record<string, unknown>[] };
 
-    expect(result.rows).toEqual([{ lib: 'jobs', event: 'completed', traceId: 'trace-1' }]);
+    expect(result.rows).toEqual([
+      { time: '00:00:00', lib: 'jobs', event: 'completed', durationMs: null, traceId: 'trace-1' },
+    ]);
+  });
+
+  it('count provider returns the number of diagnostic entries', async () => {
+    const { ctx, storage } = await makeCtx();
+    await storage.store([
+      diagnosticEntry({ lib: 'a', event: 'x', ts: 1, traceId: null, payload: {} }),
+      diagnosticEntry({ lib: 'b', event: 'y', ts: 2, traceId: null, payload: {} }),
+    ]);
+    const provider = nestjsDiagnosticsTelescope()
+      .dataProviders?.(ctx)
+      .find((p) => p.name === 'diagnostics.count');
+    expect(await provider?.resolve({}, ctx)).toEqual({ value: 2 });
+  });
+
+  it('byLib provider ranks libraries by event count', async () => {
+    const { ctx, storage } = await makeCtx();
+    await storage.store([
+      diagnosticEntry({ lib: 'billing', event: 'a', ts: 1, traceId: null, payload: {} }),
+      diagnosticEntry({ lib: 'billing', event: 'b', ts: 2, traceId: null, payload: {} }),
+      diagnosticEntry({ lib: 'audit', event: 'c', ts: 3, traceId: null, payload: {} }),
+    ]);
+    const provider = nestjsDiagnosticsTelescope()
+      .dataProviders?.(ctx)
+      .find((p) => p.name === 'diagnostics.byLib');
+    const result = (await provider?.resolve({}, ctx)) as {
+      items: { label: string; value: number }[];
+    };
+    expect(result.items).toEqual([
+      { label: 'billing', value: 2 },
+      { label: 'audit', value: 1 },
+    ]);
   });
 });
