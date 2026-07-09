@@ -1,6 +1,6 @@
 {
   "name": "@dudousxd/nestjs-diagnostics-telescope",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "nestjs-telescope extension for @dudousxd/nestjs-diagnostics — one generic watcher records every aviary:<lib>:<event> diagnostic event in the Telescope dashboard.",
   "license": "MIT",
   "repository": {
