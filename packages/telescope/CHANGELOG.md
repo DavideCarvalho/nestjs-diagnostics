@@ -1,5 +1,11 @@
 # @dudousxd/nestjs-diagnostics-telescope
 
+## 0.5.1
+
+### Patch Changes
+
+- [`0f2d623`](https://github.com/DavideCarvalho/nestjs-diagnostics/commit/0f2d623cad8b367da2759ad1c4e0c031f62a5920) - Add `exclude` option to `nestjsDiagnosticsTelescope` — a list of `lib:event` keys (the exact label shown in the "Busiest events" panel, e.g. `media:upload.progress`) to skip recording. Mutes high-frequency diagnostics channels that would otherwise flood the Telescope timeline; the events stay live on their diagnostics channel for other subscribers (OTel, custom watchers).
+
 ## 0.5.0
 
 ### Minor Changes
