@@ -9,6 +9,18 @@ import type { RecordInput, Watcher, WatcherContext } from '@dudousxd/nestjs-tele
 /** Telescope entry `type` produced by this watcher. */
 export const DIAGNOSTIC_ENTRY_TYPE = 'diagnostic';
 
+/** Construction options for {@link DiagnosticWatcher}. */
+export interface DiagnosticWatcherOptions {
+  /**
+   * `lib:event` keys to skip recording — the exact label the "Busiest events"
+   * dashboard panel shows (e.g. `'media:upload.progress'`). High-frequency
+   * channels can flood the timeline; muting one here drops only its Telescope
+   * entries. The event still publishes on its diagnostics channel, so other
+   * subscribers (OTel, custom watchers) keep seeing it.
+   */
+  exclude?: readonly string[];
+}
+
 /**
  * What a single recorded diagnostic entry looks like in the Telescope dashboard.
  * Mirrors the {@link DiagnosticEvent} envelope, with the library-defined data
@@ -56,6 +68,12 @@ export class DiagnosticWatcher implements Watcher {
   private offChannelRegistered: (() => void) | null = null;
   /** name → the subscribe listener we attached, so cleanup can detach exactly. */
   private readonly subscriptions = new Map<string, (msg: unknown) => void>();
+  /** `lib:event` keys whose events are dropped instead of recorded. */
+  private readonly excluded: ReadonlySet<string>;
+
+  constructor(options: DiagnosticWatcherOptions = {}) {
+    this.excluded = new Set(options.exclude ?? []);
+  }
 
   register(ctx: WatcherContext): void {
     if (this.registered) return;
@@ -89,6 +107,7 @@ export class DiagnosticWatcher implements Watcher {
   private safeRecord(ctx: WatcherContext, msg: unknown): void {
     try {
       if (!isDiagnosticEvent(msg)) return;
+      if (this.excluded.has(`${msg.lib}:${msg.event}`)) return;
       ctx.record(buildDiagnosticEntry(msg));
     } catch (err) {
       // NOT rethrown — telescope must never break an emitting code path.

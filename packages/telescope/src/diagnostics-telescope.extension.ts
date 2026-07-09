@@ -27,6 +27,13 @@ export interface DiagnosticsTelescopeOptions {
   topEventsLimit?: number;
   /** How many recent events to list in the table panel. Default 50. */
   recentLimit?: number;
+  /**
+   * `lib:event` keys to skip recording — the exact label the "Busiest events"
+   * panel shows (e.g. `'media:upload.progress'`). Mute high-frequency channels
+   * that would otherwise flood the timeline; the events stay live on their
+   * diagnostics channel for other subscribers (OTel, custom watchers).
+   */
+  exclude?: string[];
 }
 
 /**
@@ -63,7 +70,7 @@ export function nestjsDiagnosticsTelescope(
     name: 'diagnostics',
 
     watchers(): Watcher[] {
-      return [new DiagnosticWatcher()];
+      return [new DiagnosticWatcher({ exclude: options.exclude ?? [] })];
     },
 
     entryTypes(): ExtensionEntryType[] {

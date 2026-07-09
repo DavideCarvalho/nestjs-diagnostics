@@ -1,3 +1,4 @@
+import { emit, resetRegistry, setContextAccessor } from '@dudousxd/nestjs-diagnostics';
 import {
   type Entry,
   type ExtensionContext,
@@ -5,6 +6,7 @@ import {
   TELESCOPE_STORAGE,
   resolveConfig,
 } from '@dudousxd/nestjs-telescope';
+import { collectWatcherEntries } from '@dudousxd/nestjs-telescope-testing';
 import { describe, expect, it } from 'vitest';
 import { DIAGNOSTIC_ENTRY_TYPE, type DiagnosticEntryContent } from '../src/diagnostic.watcher.js';
 import { nestjsDiagnosticsTelescope } from '../src/diagnostics-telescope.extension.js';
@@ -77,6 +79,24 @@ describe('nestjsDiagnosticsTelescope extension', () => {
     for (const name of providerNames) {
       expect(name.split('.')[0]).toBe(ext.name);
     }
+  });
+
+  it('threads the exclude option into the watcher so muted events are not recorded', async () => {
+    resetRegistry();
+    setContextAccessor(null);
+    const [watcher] =
+      nestjsDiagnosticsTelescope({ exclude: ['media:upload.progress'] }).watchers?.(
+        {} as ExtensionContext,
+      ) ?? [];
+    if (!watcher) throw new Error('extension contributed no watcher');
+    const { recorded } = await collectWatcherEntries(watcher);
+
+    emit('media', 'upload.progress', { offset: 1024 }); // muted by exclude
+    emit('media', 'upload.complete', { id: 'u1' }); // kept
+
+    watcher.cleanup?.();
+    setContextAccessor(null);
+    expect(recorded.map((r) => r.familyHash)).toEqual(['media:upload.complete']);
   });
 
   it('topEvents provider ranks lib:event pairs by count', async () => {

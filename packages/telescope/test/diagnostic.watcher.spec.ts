@@ -173,6 +173,40 @@ describe('DiagnosticWatcher', () => {
     expect(withoutDuration.durationMs).toBeUndefined();
   });
 
+  it('skips events whose lib:event is in the exclude set', async () => {
+    const watcher = new DiagnosticWatcher({ exclude: ['media:upload.progress'] });
+    const { recorded } = await collectWatcherEntries(watcher);
+    cleanup = () => watcher.cleanup();
+
+    emit('media', 'upload.progress', { offset: 1024 });
+    emit('media', 'upload.progress', { offset: 2048 });
+
+    expect(recorded).toHaveLength(0);
+  });
+
+  it('records sibling events on an excluded lib (only the muted event is dropped)', async () => {
+    const watcher = new DiagnosticWatcher({ exclude: ['media:upload.progress'] });
+    const { recorded } = await collectWatcherEntries(watcher);
+    cleanup = () => watcher.cleanup();
+
+    emit('media', 'upload.progress', { offset: 1024 }); // muted
+    emit('media', 'upload.complete', { id: 'u1' }); // kept
+
+    expect(recorded).toHaveLength(1);
+    expect(recorded[0]?.familyHash).toBe('media:upload.complete');
+  });
+
+  it('records everything when no exclude set is configured', async () => {
+    const watcher = new DiagnosticWatcher();
+    const { recorded } = await collectWatcherEntries(watcher);
+    cleanup = () => watcher.cleanup();
+
+    emit('media', 'upload.progress', { offset: 1024 });
+
+    expect(recorded).toHaveLength(1);
+    expect(recorded[0]?.familyHash).toBe('media:upload.progress');
+  });
+
   it('cleanup() unsubscribes so later events are ignored', async () => {
     const watcher = new DiagnosticWatcher();
     const { recorded } = await collectWatcherEntries(watcher);
