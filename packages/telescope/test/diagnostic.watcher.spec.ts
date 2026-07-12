@@ -1,4 +1,10 @@
-import { emit, getChannel, resetRegistry, setContextAccessor } from '@dudousxd/nestjs-diagnostics';
+import {
+  claimDiagnostics,
+  emit,
+  getChannel,
+  resetRegistry,
+  setContextAccessor,
+} from '@dudousxd/nestjs-diagnostics';
 import { collectWatcherEntries } from '@dudousxd/nestjs-telescope-testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
@@ -215,5 +221,81 @@ describe('DiagnosticWatcher', () => {
     emit('billing', 'invoice-paid', {});
 
     expect(recorded).toHaveLength(0);
+  });
+
+  it('skips a claimed lib:event by default (a lib-specific watcher already records it)', async () => {
+    const release = claimDiagnostics('agent', ['chat-request']);
+    const watcher = new DiagnosticWatcher();
+    const { recorded } = await collectWatcherEntries(watcher);
+    cleanup = () => {
+      watcher.cleanup();
+      release();
+    };
+
+    emit('agent', 'chat-request', { model: 'gpt-4o' });
+
+    expect(recorded).toHaveLength(0);
+  });
+
+  it('records a claimed lib:event when recordClaimed: true is set', async () => {
+    const release = claimDiagnostics('agent', ['chat-request']);
+    const watcher = new DiagnosticWatcher({ recordClaimed: true });
+    const { recorded } = await collectWatcherEntries(watcher);
+    cleanup = () => {
+      watcher.cleanup();
+      release();
+    };
+
+    emit('agent', 'chat-request', { model: 'gpt-4o' });
+
+    expect(recorded).toHaveLength(1);
+    expect(recorded[0]?.familyHash).toBe('agent:chat-request');
+  });
+
+  it('manual exclude still wins independently of claim status', async () => {
+    const release = claimDiagnostics('agent', ['chat-request']);
+    // recordClaimed: true would otherwise record it, but exclude mutes it outright.
+    const watcher = new DiagnosticWatcher({
+      recordClaimed: true,
+      exclude: ['agent:chat-request'],
+    });
+    const { recorded } = await collectWatcherEntries(watcher);
+    cleanup = () => {
+      watcher.cleanup();
+      release();
+    };
+
+    emit('agent', 'chat-request', { model: 'gpt-4o' });
+
+    expect(recorded).toHaveLength(0);
+  });
+
+  it('leaves unclaimed lib:event keys unaffected', async () => {
+    const release = claimDiagnostics('agent', ['chat-request']);
+    const watcher = new DiagnosticWatcher();
+    const { recorded } = await collectWatcherEntries(watcher);
+    cleanup = () => {
+      watcher.cleanup();
+      release();
+    };
+
+    // Sibling event on the same lib, never claimed.
+    emit('agent', 'tool-call', { tool: 'search' });
+
+    expect(recorded).toHaveLength(1);
+    expect(recorded[0]?.familyHash).toBe('agent:tool-call');
+  });
+
+  it('un-claiming (release) makes the watcher record the event again', async () => {
+    const release = claimDiagnostics('agent', ['chat-request']);
+    const watcher = new DiagnosticWatcher();
+    const { recorded } = await collectWatcherEntries(watcher);
+    cleanup = () => watcher.cleanup();
+
+    emit('agent', 'chat-request', { model: 'gpt-4o' }); // claimed → skipped
+    release();
+    emit('agent', 'chat-request', { model: 'gpt-4o' }); // unclaimed → recorded
+
+    expect(recorded).toHaveLength(1);
   });
 });

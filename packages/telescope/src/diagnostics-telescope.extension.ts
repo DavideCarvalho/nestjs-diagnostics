@@ -13,6 +13,7 @@ import {
   DIAGNOSTIC_ENTRY_TYPE,
   type DiagnosticEntryContent,
   DiagnosticWatcher,
+  type DiagnosticWatcherOptions,
 } from './diagnostic.watcher.js';
 
 /** Provider names the dashboard panels bind to (namespaced to avoid collisions). */
@@ -34,6 +35,14 @@ export interface DiagnosticsTelescopeOptions {
    * diagnostics channel for other subscribers (OTel, custom watchers).
    */
   exclude?: string[];
+  /**
+   * Record events whose `lib:event` key is claimed by a lib-specific watcher
+   * (nestjs-agent's, nestjs-media's own Telescope watcher) via
+   * `claimDiagnostics`, instead of skipping them by default. See
+   * {@link DiagnosticWatcherOptions.recordClaimed} for the full rationale.
+   * `exclude` remains the way to mute noisy events regardless of claim status.
+   */
+  recordClaimed?: boolean;
 }
 
 /**
@@ -70,7 +79,12 @@ export function nestjsDiagnosticsTelescope(
     name: 'diagnostics',
 
     watchers(): Watcher[] {
-      return [new DiagnosticWatcher({ exclude: options.exclude ?? [] })];
+      return [
+        new DiagnosticWatcher({
+          exclude: options.exclude ?? [],
+          recordClaimed: options.recordClaimed ?? false,
+        }),
+      ];
     },
 
     entryTypes(): ExtensionEntryType[] {

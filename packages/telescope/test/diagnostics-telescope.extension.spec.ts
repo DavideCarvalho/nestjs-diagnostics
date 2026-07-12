@@ -1,4 +1,9 @@
-import { emit, resetRegistry, setContextAccessor } from '@dudousxd/nestjs-diagnostics';
+import {
+  claimDiagnostics,
+  emit,
+  resetRegistry,
+  setContextAccessor,
+} from '@dudousxd/nestjs-diagnostics';
 import {
   type Entry,
   type ExtensionContext,
@@ -97,6 +102,39 @@ describe('nestjsDiagnosticsTelescope extension', () => {
     watcher.cleanup?.();
     setContextAccessor(null);
     expect(recorded.map((r) => r.familyHash)).toEqual(['media:upload.complete']);
+  });
+
+  it('threads recordClaimed into the watcher so claimed events are recorded again', async () => {
+    resetRegistry();
+    setContextAccessor(null);
+    const release = claimDiagnostics('agent', ['chat-request']);
+    const [watcher] =
+      nestjsDiagnosticsTelescope({ recordClaimed: true }).watchers?.({} as ExtensionContext) ?? [];
+    if (!watcher) throw new Error('extension contributed no watcher');
+    const { recorded } = await collectWatcherEntries(watcher);
+
+    emit('agent', 'chat-request', { model: 'gpt-4o' });
+
+    watcher.cleanup?.();
+    release();
+    setContextAccessor(null);
+    expect(recorded.map((r) => r.familyHash)).toEqual(['agent:chat-request']);
+  });
+
+  it('defaults to skipping claimed events when recordClaimed is not set', async () => {
+    resetRegistry();
+    setContextAccessor(null);
+    const release = claimDiagnostics('agent', ['chat-request']);
+    const [watcher] = nestjsDiagnosticsTelescope().watchers?.({} as ExtensionContext) ?? [];
+    if (!watcher) throw new Error('extension contributed no watcher');
+    const { recorded } = await collectWatcherEntries(watcher);
+
+    emit('agent', 'chat-request', { model: 'gpt-4o' });
+
+    watcher.cleanup?.();
+    release();
+    setContextAccessor(null);
+    expect(recorded).toHaveLength(0);
   });
 
   it('topEvents provider ranks lib:event pairs by count', async () => {

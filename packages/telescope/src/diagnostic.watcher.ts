@@ -1,6 +1,7 @@
 import diagnostics_channel, { type Channel } from 'node:diagnostics_channel';
 import {
   type DiagnosticEvent,
+  isDiagnosticClaimed,
   onChannelRegistered,
   registeredChannels,
 } from '@dudousxd/nestjs-diagnostics';
@@ -19,6 +20,19 @@ export interface DiagnosticWatcherOptions {
    * subscribers (OTel, custom watchers) keep seeing it.
    */
   exclude?: readonly string[];
+  /**
+   * Record events whose `lib:event` key is CLAIMED by a lib-specific watcher —
+   * e.g. nestjs-agent's or nestjs-media's own Telescope watcher, via
+   * `claimDiagnostics` from `@dudousxd/nestjs-diagnostics`. Default `false`:
+   * claimed keys are skipped here because the claiming lib already records them
+   * as a typed entry, and recording them again would duplicate every such event
+   * (once typed, once as a generic `diagnostic` entry). Set `true` to record
+   * everything regardless of claims, e.g. to see the raw feed alongside the
+   * typed one while debugging. Independent of `exclude`: `exclude` mutes noisy
+   * events outright; `recordClaimed` only concerns events another watcher
+   * already records.
+   */
+  recordClaimed?: boolean;
 }
 
 /**
@@ -70,9 +84,12 @@ export class DiagnosticWatcher implements Watcher {
   private readonly subscriptions = new Map<string, (msg: unknown) => void>();
   /** `lib:event` keys whose events are dropped instead of recorded. */
   private readonly excluded: ReadonlySet<string>;
+  /** See {@link DiagnosticWatcherOptions.recordClaimed}. */
+  private readonly recordClaimed: boolean;
 
   constructor(options: DiagnosticWatcherOptions = {}) {
     this.excluded = new Set(options.exclude ?? []);
+    this.recordClaimed = options.recordClaimed ?? false;
   }
 
   register(ctx: WatcherContext): void {
@@ -108,6 +125,9 @@ export class DiagnosticWatcher implements Watcher {
     try {
       if (!isDiagnosticEvent(msg)) return;
       if (this.excluded.has(`${msg.lib}:${msg.event}`)) return;
+      // Checked at RECORD time (not subscribe time) so claiming stays
+      // order-independent — see the contract documented on isDiagnosticClaimed.
+      if (!this.recordClaimed && isDiagnosticClaimed(msg.lib, msg.event)) return;
       ctx.record(buildDiagnosticEntry(msg));
     } catch (err) {
       // NOT rethrown — telescope must never break an emitting code path.
