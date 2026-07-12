@@ -325,9 +325,7 @@ export function isDiagnosticEvent(msg: unknown): msg is DiagnosticEvent {
  *   `RecordInput.traceId` (telescope core 1.17+)) rather than relying on ambient OTel/context
  *   enrichment, which may not correlate with the diagnostics `traceId` at all.
  */
-export function buildDiagnosticSpanEntry(
-  msg: SpanEvent,
-): RecordInput<DiagnosticSpanEntryContent> {
+export function buildDiagnosticSpanEntry(msg: SpanEvent): RecordInput<DiagnosticSpanEntryContent> {
   const durationMs = msg.durationMs;
   const startedAt = new Date(typeof durationMs === 'number' ? msg.ts - durationMs : msg.ts);
   const content: DiagnosticSpanEntryContent = {

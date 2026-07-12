@@ -12,7 +12,6 @@ import {
   type DiagnosticEntryContent,
   type DiagnosticSpanEntryContent,
   DiagnosticWatcher,
-  
   buildDiagnosticEntry,
   buildDiagnosticSpanEntry,
   isDiagnosticEvent,
