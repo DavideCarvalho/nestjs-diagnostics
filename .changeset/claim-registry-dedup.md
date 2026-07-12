@@ -1,5 +1,5 @@
 ---
-'@dudousxd/nestjs-diagnostics-core': minor
+'@dudousxd/nestjs-diagnostics': minor
 '@dudousxd/nestjs-diagnostics-telescope': minor
 ---
 
