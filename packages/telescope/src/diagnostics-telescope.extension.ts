@@ -11,7 +11,7 @@ import {
 } from '@dudousxd/nestjs-telescope';
 import {
   DIAGNOSTIC_ENTRY_TYPE,
-  type DiagnosticEntryContent,
+  type DiagnosticEntryContentBase,
   DiagnosticWatcher,
   type DiagnosticWatcherOptions,
 } from './diagnostic.watcher.js';
@@ -152,7 +152,7 @@ export function nestjsDiagnosticsTelescope(
             const entries = await loadDiagnostics(ctx, 5_000);
             const counts = new Map<string, number>();
             for (const entry of entries) {
-              const content = entry.content as DiagnosticEntryContent | null;
+              const content = entry.content as DiagnosticEntryContentBase | null;
               if (!content) continue;
               counts.set(content.lib, (counts.get(content.lib) ?? 0) + 1);
             }
@@ -170,7 +170,7 @@ export function nestjsDiagnosticsTelescope(
             const entries = await loadDiagnostics(ctx);
             const counts = new Map<string, number>();
             for (const entry of entries) {
-              const content = entry.content as DiagnosticEntryContent | null;
+              const content = entry.content as DiagnosticEntryContentBase | null;
               if (!content) continue;
               const label = `${content.lib}:${content.event}`;
               counts.set(label, (counts.get(label) ?? 0) + 1);
@@ -188,7 +188,7 @@ export function nestjsDiagnosticsTelescope(
             const limit = numberOr(query?.limit, recentLimit);
             const entries = await loadDiagnostics(ctx, limit);
             const rows = entries.map((entry) => {
-              const content = entry.content as DiagnosticEntryContent | null;
+              const content = entry.content as DiagnosticEntryContentBase | null;
               return {
                 time: formatTime(content?.ts),
                 lib: content?.lib ?? null,

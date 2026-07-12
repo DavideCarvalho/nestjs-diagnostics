@@ -4,14 +4,19 @@ import {
   getChannel,
   resetRegistry,
   setContextAccessor,
+  trace,
 } from '@dudousxd/nestjs-diagnostics';
 import { collectWatcherEntries } from '@dudousxd/nestjs-telescope-testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   type DiagnosticEntryContent,
+  type DiagnosticSpanEntryContent,
   DiagnosticWatcher,
+  
   buildDiagnosticEntry,
+  buildDiagnosticSpanEntry,
   isDiagnosticEvent,
+  isSpanEvent,
 } from '../src/diagnostic.watcher.js';
 
 describe('DiagnosticWatcher', () => {
@@ -297,5 +302,208 @@ describe('DiagnosticWatcher', () => {
     emit('agent', 'chat-request', { model: 'gpt-4o' }); // unclaimed → recorded
 
     expect(recorded).toHaveLength(1);
+  });
+
+  // ── Span recording (trace()) — GAP 1 fix ──────────────────────────────────
+
+  describe('span recording (trace())', () => {
+    it('records exactly one entry for a completed sync span, with traceId/durationMs/startedAt', async () => {
+      const watcher = new DiagnosticWatcher();
+      const { recorded } = await collectWatcherEntries(watcher);
+      cleanup = () => watcher.cleanup();
+
+      const result = trace(
+        'checkout',
+        'price',
+        () => 42,
+        { sku: 'abc' },
+        { traceId: 'trace-span-1' },
+      );
+
+      expect(result).toBe(42);
+      // ONE entry — not one per phase (start/end would double-count).
+      expect(recorded).toHaveLength(1);
+      const input = recorded[0] as RecordInput;
+      expect(input.type).toBe('diagnostic');
+      expect(input.familyHash).toBe('checkout:price');
+      expect(input.tags).toEqual(
+        expect.arrayContaining(['lib:checkout', 'event:price', 'kind:span', 'trace:trace-span-1']),
+      );
+      expect(input.traceId).toBe('trace-span-1');
+      expect(typeof input.durationMs).toBe('number');
+      expect(input.startedAt).toBeInstanceOf(Date);
+      const content = input.content as DiagnosticSpanEntryContent;
+      expect(content.lib).toBe('checkout');
+      expect(content.event).toBe('price');
+      expect(content.phase).toBe('end');
+      expect(content.result).toBe(42);
+      expect(content.traceId).toBe('trace-span-1');
+    });
+
+    it('records exactly one entry for a completed async span (asyncEnd), not one per end + asyncEnd', async () => {
+      const watcher = new DiagnosticWatcher();
+      const { recorded } = await collectWatcherEntries(watcher);
+      cleanup = () => watcher.cleanup();
+
+      const result = await trace(
+        'billing',
+        'charge',
+        async () => 'ok',
+        { amount: 10 },
+        { traceId: 'trace-async-1' },
+      );
+
+      expect(result).toBe('ok');
+      // The premature `end` (sync-portion-complete, no `result` key) must NOT
+      // also produce an entry — only the real `asyncEnd` terminal does.
+      expect(recorded).toHaveLength(1);
+      const content = recorded[0]?.content as DiagnosticSpanEntryContent;
+      expect(content.phase).toBe('asyncEnd');
+      expect(content.result).toBe('ok');
+      expect(recorded[0]?.traceId).toBe('trace-async-1');
+    });
+
+    it('carries the error on a sync span that throws', async () => {
+      const watcher = new DiagnosticWatcher();
+      const { recorded } = await collectWatcherEntries(watcher);
+      cleanup = () => watcher.cleanup();
+
+      expect(() =>
+        trace(
+          'risky',
+          'op',
+          () => {
+            throw new Error('boom');
+          },
+          {},
+          { traceId: 'trace-err-1' },
+        ),
+      ).toThrow('boom');
+
+      expect(recorded).toHaveLength(1);
+      const content = recorded[0]?.content as DiagnosticSpanEntryContent;
+      expect(content.phase).toBe('error');
+      expect(content.error).toBeInstanceOf(Error);
+      expect((content.error as Error).message).toBe('boom');
+      expect(recorded[0]?.traceId).toBe('trace-err-1');
+    });
+
+    it('carries the error on an async span that rejects, with exactly one entry', async () => {
+      const watcher = new DiagnosticWatcher();
+      const { recorded } = await collectWatcherEntries(watcher);
+      cleanup = () => watcher.cleanup();
+
+      await expect(
+        trace('risky', 'async-op', () => Promise.reject(new Error('async boom')), {}),
+      ).rejects.toThrow('async boom');
+
+      expect(recorded).toHaveLength(1);
+      const content = recorded[0]?.content as DiagnosticSpanEntryContent;
+      expect(content.phase).toBe('error');
+      expect((content.error as Error).message).toBe('async boom');
+    });
+
+    it("omits RecordInput.traceId when the span carries none (ambient enrichment stays the Recorder's job)", async () => {
+      const watcher = new DiagnosticWatcher();
+      const { recorded } = await collectWatcherEntries(watcher);
+      cleanup = () => watcher.cleanup();
+
+      trace('quiet', 'op', () => 1, {});
+
+      expect(recorded).toHaveLength(1);
+      const input = recorded[0] as RecordInput;
+      expect('traceId' in input).toBe(false);
+      expect((input.content as DiagnosticSpanEntryContent).traceId).toBeNull();
+    });
+
+    it('skips a claimed span lib:event by default (same claim registry as point traffic)', async () => {
+      const release = claimDiagnostics('agent', ['step']);
+      const watcher = new DiagnosticWatcher();
+      const { recorded } = await collectWatcherEntries(watcher);
+      cleanup = () => {
+        watcher.cleanup();
+        release();
+      };
+
+      trace('agent', 'step', () => 1, {});
+
+      expect(recorded).toHaveLength(0);
+    });
+
+    it('records a claimed span lib:event when recordClaimed: true is set', async () => {
+      const release = claimDiagnostics('agent', ['step']);
+      const watcher = new DiagnosticWatcher({ recordClaimed: true });
+      const { recorded } = await collectWatcherEntries(watcher);
+      cleanup = () => {
+        watcher.cleanup();
+        release();
+      };
+
+      trace('agent', 'step', () => 1, {});
+
+      expect(recorded).toHaveLength(1);
+    });
+
+    it('skips excluded span lib:event keys, same as point traffic', async () => {
+      const watcher = new DiagnosticWatcher({ exclude: ['noisy:tick'] });
+      const { recorded } = await collectWatcherEntries(watcher);
+      cleanup = () => watcher.cleanup();
+
+      trace('noisy', 'tick', () => 1, {});
+
+      expect(recorded).toHaveLength(0);
+    });
+
+    it('auto-subscribes span traffic for a (lib, event) first traced AFTER register (future channels)', async () => {
+      const watcher = new DiagnosticWatcher();
+      const { recorded } = await collectWatcherEntries(watcher);
+      cleanup = () => watcher.cleanup();
+
+      // This lib's span channels did not exist when the watcher registered.
+      trace('newlib', 'newop', () => 'first-trace', {});
+
+      expect(recorded).toHaveLength(1);
+      expect(recorded[0]?.familyHash).toBe('newlib:newop');
+    });
+
+    it('isSpanEvent accepts a well-formed span envelope and rejects malformed ones', () => {
+      const base = { ts: 1, lib: 'a', event: 'b', phase: 'end', spanId: 's1' };
+      expect(isSpanEvent(base)).toBe(true);
+      expect(isSpanEvent({ ...base, v: 1 })).toBe(true);
+      expect(isSpanEvent({ ...base, phase: 'not-a-phase' })).toBe(false);
+      expect(isSpanEvent({ ...base, spanId: 42 })).toBe(false);
+      expect(isSpanEvent(null)).toBe(false);
+    });
+
+    it('buildDiagnosticSpanEntry derives startedAt from terminal ts minus durationMs', () => {
+      const entry = buildDiagnosticSpanEntry({
+        v: 1,
+        ts: 1_000,
+        lib: 'a',
+        event: 'b',
+        phase: 'end',
+        spanId: 's1',
+        traceId: 't1',
+        result: 'r',
+        durationMs: 40,
+      });
+      expect(entry.startedAt).toEqual(new Date(960));
+      expect(entry.durationMs).toBe(40);
+      expect(entry.traceId).toBe('t1');
+      expect((entry.content as DiagnosticSpanEntryContent).result).toBe('r');
+    });
+
+    it('buildDiagnosticSpanEntry falls back startedAt to ts when durationMs is absent', () => {
+      const entry = buildDiagnosticSpanEntry({
+        ts: 1_000,
+        lib: 'a',
+        event: 'b',
+        phase: 'error',
+        spanId: 's2',
+        error: new Error('x'),
+      });
+      expect(entry.startedAt).toEqual(new Date(1_000));
+      expect(entry.durationMs).toBeUndefined();
+    });
   });
 });
