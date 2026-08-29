@@ -1,5 +1,11 @@
 # @dudousxd/nestjs-diagnostics
 
+## 0.7.1
+
+### Patch Changes
+
+- [`96d300d`](https://github.com/DavideCarvalho/nestjs-diagnostics/commit/96d300d3af86b77fbdf16b307d986aec922945c4) Thanks [@DavideCarvalho](https://github.com/DavideCarvalho)! - add NestJS 12 to the supported peer range
+
 ## 0.7.0
 
 ### Minor Changes
