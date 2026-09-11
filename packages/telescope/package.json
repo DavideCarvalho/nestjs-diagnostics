@@ -35,7 +35,7 @@
     "@dudousxd/nestjs-telescope": "^1.17.0"
   },
   "devDependencies": {
-    "@dudousxd/nestjs-telescope": "1.17.0",
+    "@dudousxd/nestjs-telescope": "1.29.0",
     "@dudousxd/nestjs-telescope-testing": "1.9.0",
     "@types/node": "^20.0.0",
     "typescript": "^5.4.0",
