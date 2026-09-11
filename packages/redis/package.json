@@ -55,7 +55,7 @@
     "ioredis": "^5.4.2",
     "reflect-metadata": "^0.2.2",
     "typescript": "^5.4.0",
-    "vitest": "^3.0.0"
+    "vitest": "^3.2.6"
   },
   "engines": {
     "node": ">=20"
