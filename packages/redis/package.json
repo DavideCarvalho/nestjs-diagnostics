@@ -8,6 +8,20 @@
     "url": "git+https://github.com/DavideCarvalho/nestjs-diagnostics.git",
     "directory": "packages/redis"
   },
+  "homepage": "https://davidecarvalho.github.io/aviary/docs/diagnostics",
+  "bugs": {
+    "url": "https://github.com/DavideCarvalho/nestjs-diagnostics/issues"
+  },
+  "keywords": [
+    "nestjs",
+    "diagnostics",
+    "diagnostics-channel",
+    "redis",
+    "transport",
+    "cross-process",
+    "aviary",
+    "tanstack-intent"
+  ],
   "author": "Davi Carvalho <davi@goflip.ai>",
   "type": "module",
   "main": "./dist/index.js",
@@ -19,7 +33,12 @@
       "default": "./dist/index.js"
     }
   },
-  "files": ["dist/", "README.md", "CHANGELOG.md", "skills"],
+  "files": [
+    "dist/",
+    "README.md",
+    "CHANGELOG.md",
+    "skills"
+  ],
   "sideEffects": false,
   "scripts": {
     "build": "tsc -p tsconfig.json",
@@ -59,15 +78,5 @@
   },
   "engines": {
     "node": ">=20"
-  },
-  "keywords": [
-    "nestjs",
-    "diagnostics",
-    "diagnostics-channel",
-    "redis",
-    "transport",
-    "cross-process",
-    "aviary",
-    "tanstack-intent"
-  ]
+  }
 }

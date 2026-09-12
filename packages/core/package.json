@@ -8,6 +8,19 @@
     "url": "git+https://github.com/DavideCarvalho/nestjs-diagnostics.git",
     "directory": "packages/core"
   },
+  "homepage": "https://davidecarvalho.github.io/aviary/docs/diagnostics",
+  "bugs": {
+    "url": "https://github.com/DavideCarvalho/nestjs-diagnostics/issues"
+  },
+  "keywords": [
+    "nestjs",
+    "diagnostics",
+    "diagnostics-channel",
+    "observability",
+    "telemetry",
+    "events",
+    "tanstack-intent"
+  ],
   "author": "Davi Carvalho <davi@goflip.ai>",
   "type": "module",
   "main": "./dist/index.js",
@@ -40,7 +53,12 @@
       "optional": true
     }
   },
-  "files": ["dist/", "README.md", "CHANGELOG.md", "skills"],
+  "files": [
+    "dist/",
+    "README.md",
+    "CHANGELOG.md",
+    "skills"
+  ],
   "//sideEffects": "NOT false: registry.ts and context-accessor.ts register process-global state on globalThis via Symbol.for AT IMPORT TIME (the cross-copy-stable channel registry + context accessor), and channel.ts/trace.ts register a reset hook at module load. A bundler told sideEffects:false could tree-shake these initializers away, breaking cross-copy global stability. The array lists exactly the side-effectful modules (matching both src and published dist paths); pure modules (index, types) stay tree-shakeable.",
   "sideEffects": [
     "**/registry.js",
@@ -70,14 +88,5 @@
   },
   "engines": {
     "node": ">=20"
-  },
-  "keywords": [
-    "nestjs",
-    "diagnostics",
-    "diagnostics-channel",
-    "observability",
-    "telemetry",
-    "events",
-    "tanstack-intent"
-  ]
+  }
 }

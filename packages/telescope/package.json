@@ -8,6 +8,20 @@
     "url": "git+https://github.com/DavideCarvalho/nestjs-diagnostics.git",
     "directory": "packages/telescope"
   },
+  "homepage": "https://davidecarvalho.github.io/aviary/docs/diagnostics",
+  "bugs": {
+    "url": "https://github.com/DavideCarvalho/nestjs-diagnostics/issues"
+  },
+  "keywords": [
+    "nestjs",
+    "diagnostics",
+    "diagnostics-channel",
+    "telescope",
+    "observability",
+    "watcher",
+    "extension",
+    "tanstack-intent"
+  ],
   "author": "Davi Carvalho <davi@goflip.ai>",
   "type": "module",
   "main": "./dist/index.js",
@@ -19,7 +33,12 @@
       "default": "./dist/index.js"
     }
   },
-  "files": ["dist/", "README.md", "CHANGELOG.md", "skills"],
+  "files": [
+    "dist/",
+    "README.md",
+    "CHANGELOG.md",
+    "skills"
+  ],
   "//sideEffects": "Safe to be false: this package has NO module-level side effects. The watcher subscribes to diagnostics channels only inside register() at runtime, never at import time, and the rest are pure declarations/exports. Enables tree-shaking for consumers.",
   "sideEffects": false,
   "scripts": {
@@ -43,15 +62,5 @@
   },
   "engines": {
     "node": ">=20"
-  },
-  "keywords": [
-    "nestjs",
-    "diagnostics",
-    "diagnostics-channel",
-    "telescope",
-    "observability",
-    "watcher",
-    "extension",
-    "tanstack-intent"
-  ]
+  }
 }
