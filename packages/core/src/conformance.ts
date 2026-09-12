@@ -1,9 +1,13 @@
 /**
- * Trava anti-drift para contract tests: assere que TODO token exportado por uma
- * lib segue o naming canônico `@dudousxd/nestjs-<lib>:<name>` (i.e. foi criado
- * por `capability(lib, ...)`). `Symbol.for(k).description === k`, então basta
- * checar o prefixo da `description` — não é preciso comparar identidade.
- * Lança um erro que NOMEIA o export ofensor, virando o drift em teste vermelho.
+ * Anti-drift latch for contract tests: asserts that EVERY token a lib exports
+ * follows the canonical `@dudousxd/nestjs-<lib>:<name>` naming. Because
+ * `Symbol.for(k).description === k`, checking the `description` prefix is enough —
+ * no identity comparison needed. Throws an error that NAMES the offending export,
+ * turning drift into a red test.
+ *
+ * It checks the NAME, not the provenance: a symbol spelled by hand with the right
+ * prefix passes exactly like one built by `capability(lib, ...)`. That is the
+ * point — the canonical name is the contract, not the factory call.
  */
 export function assertCapabilityNaming(lib: string, tokens: Record<string, symbol>): void {
   const prefix = `@dudousxd/nestjs-${lib}:`;

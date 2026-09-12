@@ -1,18 +1,23 @@
 /**
- * O token de DI estável para a capability `<lib>:<name>`. Fonte única do naming
- * `@dudousxd/nestjs-<lib>:<name>`. Como usa o registry global de símbolos
- * (`Symbol.for`), produtor e consumidor em libs diferentes — sem se importarem —
- * resolvem o MESMO símbolo. Espelha o `channelName(lib, event)` do transporte de
- * eventos, do outro lado do mesmo protocolo.
+ * The stable DI token for the capability `<lib>:<name>`, built from the canonical
+ * `@dudousxd/nestjs-<lib>:<name>` name. Because it goes through the global symbol
+ * registry (`Symbol.for`), a producer and a consumer living in different libs —
+ * neither importing the other — resolve the SAME symbol. Mirrors the event
+ * transport's `channelName(lib, event)`, on the other side of the same protocol.
+ *
+ * The naming is a convention, not an exclusive factory: a token spelled by hand
+ * with the same string IS the same symbol, which is what lets a lib adopt this
+ * without a breaking change. `CONTEXT_ACCESSOR` in `context-accessor.ts` is
+ * exactly that case — `capability('context', 'accessor')` resolves to it.
  */
 export function capability(lib: string, name: string): symbol {
   return Symbol.for(`@dudousxd/nestjs-${lib}:${name}`);
 }
 
 /**
- * Registry tipado de capabilities, augmentado pelas libs via declaration merging
- * — espelho exato do `ChannelRegistry` do transporte de eventos. Vazio por
- * padrão; o caminho não-tipado (`unknown`) está sempre disponível.
+ * Typed capability registry, augmented by libs through declaration merging — the
+ * exact mirror of the event transport's `ChannelRegistry`. Empty by default; the
+ * untyped (`unknown`) path is always available.
  *
  * ```ts
  * declare module '@dudousxd/nestjs-diagnostics' {
@@ -25,9 +30,9 @@ export function capability(lib: string, name: string): symbol {
 export interface CapabilityRegistry {}
 
 /**
- * O tipo declarado para `(TLib, TName)` no {@link CapabilityRegistry}, ou
- * `unknown` quando o par não está registrado. Espelha `PayloadOf` do
- * transporte de eventos.
+ * The type declared for `(TLib, TName)` in the {@link CapabilityRegistry}, or
+ * `unknown` when the pair is not registered. Mirrors `PayloadOf` from the event
+ * transport.
  */
 export type CapabilityOf<
   TLib extends string,
