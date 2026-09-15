@@ -52,7 +52,7 @@
     "@dudousxd/nestjs-telescope": "1.29.0",
     "@dudousxd/nestjs-telescope-testing": "1.12.0",
     "@types/node": "20.19.43",
-    "typescript": "5.9.3",
+    "typescript": "7.0.2",
     "vitest": "3.2.7"
   },
   "engines": {
