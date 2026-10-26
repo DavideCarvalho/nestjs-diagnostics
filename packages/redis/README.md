@@ -63,7 +63,10 @@ teardown();
 ## How it works
 
 - **Forwarder:** subscribes to the selected local channels; each event is published to Redis as
-  `{ node, env }` (the diagnostics envelope).
+  `{ node, env }` (the diagnostics envelope). `emit()` only queues the event: the queue is
+  serialized and published once per event loop turn (`setImmediate`), in emit order, as a single
+  pipeline when `pub` has `pipeline()` (ioredis does) and one `publish` per event otherwise. Still
+  one Redis message per event. The teardown publishes anything still queued before unsubscribing.
 - **Receiver:** subscribes to the Redis channel; each message from a *different* node is re-emitted
   locally via the diagnostics bus, so all local subscribers fire.
 - **Loop-safe:** the receiver skips its own echoes (`node === nodeId`) and a re-emit guard stops a
@@ -74,5 +77,9 @@ teardown();
 - **Payloads cross a process boundary as JSON** — class instances arrive as plain objects (no
   methods/prototype), `Date` as an ISO string. Read fields, not behavior, in cross-process handlers.
 - **Fire-and-forget**, like the in-process bus: no guaranteed delivery, ordering, or replay.
+- **The payload is serialized at the end of the turn**, not inside `emit()`. A payload object the
+  emitter mutates synchronously after `emit()` is relayed with its state at flush time, which is
+  also the state in-process subscribers holding the same reference see. A payload that can't be
+  serialized (a circular reference) drops only that event.
 - The relay never opens or closes your Redis connections — you own their lifecycle. It never throws
   back into `emit()`.

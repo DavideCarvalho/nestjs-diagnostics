@@ -212,6 +212,8 @@ The static `forRoot({ pub, sub, libs })` takes pre-built clients directly. Reach
 
 The relay never opens or closes your Redis connections — you own their lifecycle — and it's loop-safe (a process skips its own echoes, so two pods never ping-pong). Note that **payloads cross the boundary as JSON**: class instances arrive as plain objects and `Date` as an ISO string, so cross-process handlers should read fields, not behavior.
 
+Forwarding stays off the emitting code's call stack: `emit()` only queues the event, and the relay serializes and publishes the queue once per event loop turn, in emit order. With a `pub` that has `pipeline()` (ioredis does), a turn's events go out as one pipeline, so one socket write per turn rather than per event. A client without it gets one `publish` per event. Either way each event is its own Redis message, `{ node, env }`. Because serialization happens at the end of the turn, a payload the emitter mutates right after `emit()` is relayed with its state at flush time, and an unserializable payload (a circular reference) drops only that event. Tearing the relay down, including `DiagnosticsRedisModule` shutdown, publishes whatever is still queued first.
+
 ## In tests
 
 Subscribing makes events assertable. Drop a collector in your test, exercise the code, and check what was emitted:
