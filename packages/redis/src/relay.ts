@@ -11,10 +11,18 @@ import {
 /** The minimal Redis pub/sub surface the relay uses. An ioredis instance satisfies it structurally. */
 export interface RedisLike {
   publish(channel: string, message: string): unknown;
+  /** When present, a tick's forwarded events go out as one pipeline instead of one round trip each. */
+  pipeline?(): RedisPipelineLike;
   subscribe(channel: string, callback?: (err: Error | null, count: number) => void): unknown;
   on(event: 'message', listener: (channel: string, message: string) => void): unknown;
   removeListener(event: 'message', listener: (channel: string, message: string) => void): unknown;
   unsubscribe(channel: string): unknown;
+}
+
+/** The slice of an ioredis pipeline the relay uses to batch publishes. */
+export interface RedisPipelineLike {
+  publish(channel: string, message: string): unknown;
+  exec(): unknown;
 }
 
 export interface ChannelRef {
@@ -59,7 +67,12 @@ function parseChannelName(name: string): ChannelRef | null {
  * echo suppression and a re-emit guard. Never throws into `emit()` or the Redis handler. Does NOT
  * close the `pub`/`sub` connections — the caller owns them.
  *
- * @returns a teardown that removes all local subscriptions and the Redis message handler.
+ * Forwarding happens off the emitter's call stack: selected events are queued and, once per event
+ * loop turn, serialized and published in emit order (one Redis message per event, sent as a single
+ * pipeline when `pub` supports it).
+ *
+ * @returns a teardown that publishes any queued events, then removes all local subscriptions and
+ *   the Redis message handler.
  */
 export function createDiagnosticsRedisRelay(options: DiagnosticsRedisRelayOptions): () => void {
   const { pub, sub } = options;
@@ -73,14 +86,49 @@ export function createDiagnosticsRedisRelay(options: DiagnosticsRedisRelayOption
   const subscribed = new Set<string>();
   const reEmitting = new WeakSet<object>();
 
+  const pending: object[] = [];
+  let scheduled: ReturnType<typeof setImmediate> | null = null;
+
+  const publishOne = (message: string): void => {
+    try {
+      pub.publish(redisChannel, message);
+    } catch {
+      // a failing publish drops only its own event
+    }
+  };
+
+  const flush = (): void => {
+    if (scheduled !== null) {
+      clearImmediate(scheduled);
+      scheduled = null;
+    }
+    if (pending.length === 0) return;
+    const messages: string[] = [];
+    for (const env of pending.splice(0)) {
+      try {
+        messages.push(JSON.stringify({ node: nodeId, env }));
+      } catch {
+        // an unserializable event is dropped without affecting the rest of the batch
+      }
+    }
+    if (messages.length > 1 && typeof pub.pipeline === 'function') {
+      try {
+        const pipeline = pub.pipeline();
+        for (const message of messages) pipeline.publish(redisChannel, message);
+        pipeline.exec();
+      } catch {
+        // never throw out of the flush
+      }
+      return;
+    }
+    for (const message of messages) publishOne(message);
+  };
+
   const forward = (msg: unknown): void => {
     if (typeof msg !== 'object' || msg === null) return;
     if (reEmitting.has(msg)) return; // a re-emitted remote event — do not send it back
-    try {
-      pub.publish(redisChannel, JSON.stringify({ node: nodeId, env: msg }));
-    } catch {
-      // never throw back into the synchronous emit() that triggered this
-    }
+    pending.push(msg);
+    scheduled ??= setImmediate(flush);
   };
 
   const subscribeRef = (ref: ChannelRef): void => {
@@ -141,6 +189,7 @@ export function createDiagnosticsRedisRelay(options: DiagnosticsRedisRelayOption
   sub.on('message', onMessage);
 
   return () => {
+    flush();
     for (const { ref, listener } of subscriptions) {
       getChannel(ref.lib, ref.event).unsubscribe(listener);
     }
