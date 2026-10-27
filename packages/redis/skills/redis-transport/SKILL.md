@@ -79,9 +79,10 @@ Source: `packages/redis/src/relay.ts` (`wildcardMatches`, `subscribeRef`, `Diagn
 
 ### 2. Manual relay outside Nest
 
-`createDiagnosticsRedisRelay(options)` returns a `teardown()` that removes all
-local subscriptions and the Redis message handler. It never opens or closes your
-Redis connections — you own their lifecycle:
+`createDiagnosticsRedisRelay(options)` returns a `teardown()` that first
+publishes any queued events, then removes all local subscriptions and the Redis
+message handler. It never opens or closes your Redis connections — you own their
+lifecycle:
 
 ```ts
 import { createDiagnosticsRedisRelay } from '@dudousxd/nestjs-diagnostics-redis';
@@ -95,7 +96,13 @@ const teardown = createDiagnosticsRedisRelay({
 teardown();
 ```
 
-Source: `packages/redis/src/relay.ts` (`createDiagnosticsRedisRelay`).
+Forwarding is batched off the emitter's call stack: `emit()` only queues the
+event, and the queue is serialized and published once per event loop turn in emit
+order (one Redis message per event, unchanged wire format) — via a single
+pipeline when the turn queued more than one event and `pub` supports
+`pipeline()`, otherwise one `publish` per message.
+
+Source: `packages/redis/src/relay.ts` (`createDiagnosticsRedisRelay` `forward`/`flush`).
 
 ### 3. Loop-safety
 
@@ -162,7 +169,8 @@ DiagnosticsRedisModule.forRoot({ pub: redis, sub: redis.duplicate(), libs: ['dur
 // e.g. in your Redis provider's onApplicationShutdown: await redis.quit();
 ```
 
-The relay teardown removes only its own subscriptions and Redis message handler;
-it never opens or closes `pub`/`sub`. Manage their lifecycle in your own provider.
+The relay teardown first publishes any queued events, then removes its own
+subscriptions and Redis message handler; it never opens or closes `pub`/`sub`.
+Manage their lifecycle in your own provider.
 Source: `packages/redis/src/diagnostics-redis.module.ts` (`DiagnosticsRedisStarter` teardown),
 `packages/redis/src/relay.ts` (return teardown).
