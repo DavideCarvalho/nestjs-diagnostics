@@ -1,5 +1,11 @@
 # @dudousxd/nestjs-diagnostics-redis
 
+## 0.2.4
+
+### Patch Changes
+
+- [#64](https://github.com/DavideCarvalho/nestjs-diagnostics/pull/64) [`4306143`](https://github.com/DavideCarvalho/nestjs-diagnostics/commit/43061439ba0e7aba4f506b9d54aa8640a9c47ecb) Thanks [@DavideCarvalho](https://github.com/DavideCarvalho)! - Forward relayed events off the emitter's call stack. `emit()` no longer serializes and publishes to Redis synchronously: selected events are queued and, once per event loop turn, sent in emit order as a single pipeline (one Redis message per event, same wire format). Queued events are published when the relay is torn down.
+
 ## 0.2.3
 
 ### Patch Changes
