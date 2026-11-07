@@ -13,6 +13,23 @@ export {
   type UserRef,
 } from './context-accessor.js';
 export {
+  NESTJS_AUTHENTICATION_CHANNELS,
+  NESTJS_AUTHORIZATION_CHANNELS,
+  NESTJS_MAIL_CHANNELS,
+  NESTJS_RESILIENCE_CHANNELS,
+  NESTJS_WORKFLOWS_CHANNELS,
+  OFFICIAL_CHANNEL_PREFIX,
+  OFFICIAL_CHANNELS,
+  OFFICIAL_PACKAGE_VERSIONS,
+  type OfficialChannelName,
+  type OfficialDiagnosticEvent,
+  type OfficialLib,
+  type OfficialListener,
+  type OfficialType,
+  officialChannelNames,
+  subscribeOfficial,
+} from './official.js';
+export {
   onChannelRegistered,
   registerChannel,
   registeredChannels,

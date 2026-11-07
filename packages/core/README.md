@@ -94,6 +94,45 @@ const off = onChannelRegistered(subscribe);
 This is exactly how `@dudousxd/nestjs-diagnostics-telescope`'s single generic
 watcher records every diagnostic event in the Telescope dashboard.
 
+## First-party `nestjs:*` channels
+
+The official NestJS packages publish their own events on
+`diagnostics_channel` with the convention `nestjs:<lib>:<type>`: a raw
+payload, with no envelope and no traceId (see
+[docs.nestjs.com](https://docs.nestjs.com)). **`nestjs:*` is the first-party
+convention, and Aviary never publishes on it.** `aviary:*` is only for what the
+official packages don't emit.
+
+`subscribeOfficial` lets one consumer record both. It wraps each official
+payload in the Aviary envelope, with `traceId` taken from the context accessor
+and `source: 'nestjs'`:
+
+```ts
+import { subscribeOfficial } from '@dudousxd/nestjs-diagnostics';
+
+const off = subscribeOfficial('resilience', ['retry', 'circuit-open'], (event, channel) => {
+  // event: { v, ts, lib: 'resilience', event: 'retry', traceId, payload, source: 'nestjs' }
+});
+subscribeOfficial('authentication', 'all', record);
+off();
+```
+
+The channel lists are exported per lib in one file, pinned to the official
+versions they were verified against (`OFFICIAL_PACKAGE_VERSIONS`). A test
+re-reads the installed packages and fails if a channel is added or renamed.
+
+| Lib | Constant | Channels |
+| --- | --- | --- |
+| `@nestjs/resilience` 0.0.3 | `NESTJS_RESILIENCE_CHANNELS` | 9 |
+| `@nestjs/workflows` 0.0.5 | `NESTJS_WORKFLOWS_CHANNELS` | 19 |
+| `@nestjs/authentication` 0.1.5 | `NESTJS_AUTHENTICATION_CHANNELS` | 13 |
+| `@nestjs/authorization` 0.1.3 | `NESTJS_AUTHORIZATION_CHANNELS` | 1 (`denied`) |
+| `@nestjs/mail` 0.0.2 | `NESTJS_MAIL_CHANNELS` | 2 (`sent`, `failed`) |
+
+These channels are not added to the `aviary:*` registry
+(`registeredChannels`/`onChannelRegistered`). Their lists are fixed, so subscribe
+to them explicitly.
+
 ## API
 
 | Export | Description |
@@ -106,7 +145,9 @@ watcher records every diagnostic event in the Telescope dashboard.
 | `onChannelRegistered(cb)` | Notified once per future channel registration; returns an unsubscribe. |
 | `setContextAccessor(accessor \| null)` | Register the accessor `emit` reads `traceId` from. |
 | `CONTEXT_ACCESSOR` | Shared DI token for the optional context accessor. |
-| `DiagnosticEvent`, `EmitOptions`, `ContextAccessor` | Types. |
+| `subscribeOfficial(lib, types \| 'all', fn)` | Subscribe to first-party `nestjs:<lib>:<type>` channels, each payload wrapped in the envelope (+ `source: 'nestjs'`). Returns an unsubscribe. |
+| `OFFICIAL_CHANNELS`, `NESTJS_*_CHANNELS`, `OFFICIAL_PACKAGE_VERSIONS`, `officialChannelNames()` | The pinned first-party channel lists. |
+| `DiagnosticEvent`, `EmitOptions`, `ContextAccessor`, `OfficialDiagnosticEvent` | Types. |
 
 ## Reacting to events in NestJS — `@OnDiagnostic`
 
