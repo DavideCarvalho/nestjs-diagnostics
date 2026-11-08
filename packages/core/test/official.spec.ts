@@ -21,7 +21,11 @@ const require = createRequire(import.meta.url);
 /** The installed package's root (its `exports` hides package.json, so walk up from the entry). */
 function packageRoot(lib: OfficialLib): string {
   let dir = dirname(require.resolve(`@nestjs/${lib}`));
-  while (!readdirSync(dir).includes('package.json')) dir = dirname(dir);
+  while (!readdirSync(dir).includes('package.json')) {
+    const parent = dirname(dir);
+    if (parent === dir) throw new Error(`no package.json above the @nestjs/${lib} entry`);
+    dir = parent;
+  }
   return dir;
 }
 
@@ -176,10 +180,13 @@ describe('subscribeOfficial', () => {
     off();
   });
 
-  it('rejects unknown libs and types', () => {
+  it('rejects unknown libs, unknown types and an empty selection', () => {
     expect(() => subscribeOfficial('nope' as OfficialLib, 'all', () => {})).toThrow(/unknown/);
     // @ts-expect-error — not a resilience channel
     expect(() => subscribeOfficial('resilience', ['sent'], () => {})).toThrow(/no 'sent'/);
+    expect(() => subscribeOfficial('resilience', [], () => {})).toThrow(
+      /no 'resilience' channel selected/,
+    );
   });
 
   it('does not touch the aviary registry', () => {

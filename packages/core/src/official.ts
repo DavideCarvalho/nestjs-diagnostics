@@ -162,6 +162,11 @@ export function subscribeOfficial<L extends OfficialLib>(
     throw new TypeError(`subscribeOfficial: unknown first-party lib '${String(lib)}'`);
   }
   const selected = types === 'all' ? Object.keys(map) : [...new Set(types)];
+  if (selected.length === 0) {
+    throw new TypeError(
+      `subscribeOfficial: no '${lib}' channel selected; pass one or more types, or 'all'`,
+    );
+  }
   const subscriptions: Array<[string, (message: unknown) => void]> = [];
   for (const type of selected) {
     const name = map[type];
