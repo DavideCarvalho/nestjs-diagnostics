@@ -119,7 +119,8 @@ off();
 
 The channel lists are exported per lib in one file, pinned to the official
 versions they were verified against (`OFFICIAL_PACKAGE_VERSIONS`). A test
-re-reads the installed packages and fails if a channel is added or renamed.
+re-reads the installed packages and fails if a channel is added, renamed or
+removed.
 
 | Lib | Constant | Channels |
 | --- | --- | --- |

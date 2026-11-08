@@ -10,7 +10,7 @@ dashboard. No per-library watcher needed.
 
 ```sh
 pnpm add @dudousxd/nestjs-diagnostics-telescope
-# peers: @dudousxd/nestjs-telescope, plus @dudousxd/nestjs-diagnostics on the producers
+# peers: @dudousxd/nestjs-telescope ^1.17.0 || ^2.0.0, plus @dudousxd/nestjs-diagnostics on the producers
 ```
 
 ## Usage
