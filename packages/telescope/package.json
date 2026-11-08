@@ -50,7 +50,7 @@
   },
   "devDependencies": {
     "@dudousxd/nestjs-telescope": "1.31.1",
-    "@dudousxd/nestjs-telescope-testing": "1.12.0",
+    "@dudousxd/nestjs-telescope-testing": "1.13.0",
     "@types/node": "20.19.43",
     "typescript": "5.9.3",
     "vitest": "3.2.7"
