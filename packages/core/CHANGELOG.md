@@ -1,5 +1,11 @@
 # @dudousxd/nestjs-diagnostics
 
+## 0.8.1
+
+### Patch Changes
+
+- [#77](https://github.com/DavideCarvalho/nestjs-diagnostics/pull/77) [`5730846`](https://github.com/DavideCarvalho/nestjs-diagnostics/commit/5730846a07b685effba58b344004722dc4d7f08c) Thanks [@DavideCarvalho](https://github.com/DavideCarvalho)! - Docs: `OfficialDiagnosticEvent` TSDoc no longer says Telescope's `DiagnosticWatcher` records `nestjs:*`; READMEs note the removed-channel test and the Telescope peer range.
+
 ## 0.8.0
 
 ### Minor Changes
