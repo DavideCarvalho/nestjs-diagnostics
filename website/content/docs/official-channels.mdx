@@ -13,7 +13,7 @@ The official NestJS packages publish their own events on `node:diagnostics_chann
 
 ## `subscribeOfficial`
 
-Aviary's addition is a subscriber that wraps each official payload in the Aviary envelope. That way a consumer, such as Telescope's `DiagnosticWatcher` or an OTel exporter, can record both kinds the same way:
+Aviary's addition is a subscriber that wraps each official payload in the Aviary envelope. That way a consumer, such as an OTel exporter, can record both kinds the same way. Telescope's `DiagnosticWatcher` only subscribes `aviary:*` channels; Telescope records `nestjs:*` through `@dudousxd/nestjs-telescope-official`.
 
 ```ts
 import { subscribeOfficial } from '@dudousxd/nestjs-diagnostics';
@@ -31,6 +31,8 @@ off(); // unsubscribe
 - `durationMs` is copied from the payload when the payload has a numeric one, for example workflows' `step-completed`.
 - `source: 'nestjs'` tells these events apart from `emit()` envelopes, which have no `source`.
 - An exception thrown by your listener never reaches the official publisher.
+- It throws a `TypeError` on an unknown lib, an unknown type, or an empty `types` array. Use `'all'` for every channel.
+- Duplicate types are ignored. Calling the returned unsubscribe twice is safe.
 
 ## Pinned channel lists
 

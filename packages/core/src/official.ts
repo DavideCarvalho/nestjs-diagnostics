@@ -123,8 +123,8 @@ export function officialChannelNames(): string[] {
 /**
  * The Aviary envelope wrapped around an official payload: the usual
  * {@link DiagnosticEvent} plus `source: 'nestjs'`, so an observer that records
- * both kinds (Telescope's `DiagnosticWatcher`) can tell them apart. Aviary's own
- * `emit()` envelopes carry no `source`.
+ * both kinds can tell them apart. Aviary's own `emit()` envelopes carry no
+ * `source`.
  */
 export interface OfficialDiagnosticEvent<TPayload = unknown> extends DiagnosticEvent<TPayload> {
   source: 'nestjs';
