@@ -1,5 +1,11 @@
 # @dudousxd/nestjs-diagnostics-telescope
 
+## 0.7.2
+
+### Patch Changes
+
+- [#73](https://github.com/DavideCarvalho/nestjs-diagnostics/pull/73) [`729b64e`](https://github.com/DavideCarvalho/nestjs-diagnostics/commit/729b64ed39a4bc31481506df653514c4c4fae1a2) Thanks [@DavideCarvalho](https://github.com/DavideCarvalho)! - Accept `@dudousxd/nestjs-telescope` 2.x as a peer (`^1.17.0 || ^2.0.0`). Telescope 2.0's breaking changes are about route protection only. The extension, watcher and storage APIs this package uses are unchanged.
+
 ## 0.7.1
 
 ### Patch Changes
