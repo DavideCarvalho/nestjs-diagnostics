@@ -162,3 +162,12 @@ The core swallows errors in `emit`/`registerChannel`, but a listener you attach
 directly runs inside the synchronous `publish` — guard it yourself, as the
 Telescope watcher's `safeRecord` does.
 Source: `packages/telescope/src/diagnostic.watcher.ts` (`safeRecord`).
+
+## First-party `nestjs:*` channels
+
+The official NestJS packages (`@nestjs/resilience`, `workflows`,
+`authentication`, `authorization`, `mail`) publish raw payloads on
+`nestjs:<lib>:<type>`. These channels are not in the registry. Use
+`subscribeOfficial(lib, types | 'all', fn)`, which wraps each payload in the
+envelope with `traceId` and `source: 'nestjs'`. Never publish on `nestjs:*`
+yourself. Lists: `OFFICIAL_CHANNELS` / `NESTJS_*_CHANNELS`.
