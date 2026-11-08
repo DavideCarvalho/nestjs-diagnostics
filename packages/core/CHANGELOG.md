@@ -1,5 +1,11 @@
 # @dudousxd/nestjs-diagnostics
 
+## 0.8.0
+
+### Minor Changes
+
+- [#71](https://github.com/DavideCarvalho/nestjs-diagnostics/pull/71) [`f4c910b`](https://github.com/DavideCarvalho/nestjs-diagnostics/commit/f4c910b0651ee9419aa452268f23646533d10306) Thanks [@DavideCarvalho](https://github.com/DavideCarvalho)! - Add `subscribeOfficial(lib, types | 'all', fn)`, which subscribes to the first-party `nestjs:<lib>:<type>` channels (`@nestjs/resilience`, `workflows`, `authentication`, `authorization`, `mail`) and wraps each raw payload in the Aviary envelope, with `traceId` from the context accessor and `source: 'nestjs'`. The channel lists are exported per lib (`NESTJS_*_CHANNELS`, `OFFICIAL_CHANNELS`), pinned to `OFFICIAL_PACKAGE_VERSIONS`, and guarded by a drift test. Aviary never publishes on `nestjs:*`.
+
 ## 0.7.2
 
 ### Patch Changes

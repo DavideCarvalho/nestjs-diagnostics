@@ -1,5 +1,12 @@
 # @dudousxd/nestjs-diagnostics-telescope
 
+## 0.7.1
+
+### Patch Changes
+
+- Updated dependencies [[`f4c910b`](https://github.com/DavideCarvalho/nestjs-diagnostics/commit/f4c910b0651ee9419aa452268f23646533d10306)]:
+  - @dudousxd/nestjs-diagnostics@0.8.0
+
 ## 0.7.0
 
 ### Minor Changes
