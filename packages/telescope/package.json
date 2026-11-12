@@ -46,10 +46,10 @@
     "@dudousxd/nestjs-diagnostics": "workspace:^"
   },
   "peerDependencies": {
-    "@dudousxd/nestjs-telescope": "^1.17.0 || ^2.0.0 || ^3.0.0"
+    "@dudousxd/nestjs-telescope": "^1.17.0 || ^2.0.0 || ^3.0.0 || ^4.0.0"
   },
   "devDependencies": {
-    "@dudousxd/nestjs-telescope": "3.0.0",
+    "@dudousxd/nestjs-telescope": "3.2.0",
     "@dudousxd/nestjs-telescope-testing": "1.13.0",
     "@types/node": "24.19.2",
     "typescript": "5.9.3",
