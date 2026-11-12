@@ -1,0 +1,100 @@
+---
+title: Recent events
+description: Keep the last diagnostics events of a process in memory and read them back, on by default outside production.
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+`DiagnosticsModule` keeps the last diagnostics events of the process in a fixed-size ring: every `aviary:*` event, the `trace()` span phases, and the first-party `nestjs:*` events. Read them from code, from a test, or from the `diagnostics_list_recent_events` dev tool.
+
+## Turning it on and off
+
+```ts
+DiagnosticsModule.forRoot({
+  recent: { size: 1000 }, // default: on unless NODE_ENV is 'production', 500 events
+});
+```
+
+| `recent` | Buffer |
+| --- | --- |
+| omitted | on unless `NODE_ENV` is `'production'`, 500 events |
+| `true` | on everywhere, 500 events |
+| `{ size }` | on everywhere, `size` events |
+| `false` | off |
+
+<Callout type="warn">
+  The buffer subscribes to every channel, so `emit()` builds its envelope even when nothing else listens. That is why it is off in production unless you turn it on.
+</Callout>
+
+## Reading it
+
+Inject `DiagnosticsRecentEvents`:
+
+```ts
+import { Injectable } from '@nestjs/common';
+import { DiagnosticsRecentEvents } from '@dudousxd/nestjs-diagnostics/nestjs';
+
+@Injectable()
+export class Debugging {
+  constructor(private readonly recent: DiagnosticsRecentEvents) {}
+
+  failedRuns() {
+    return this.recent.list({ lib: 'durable', event: /run\.(failed|cancelled)/, limit: 50 });
+  }
+}
+```
+
+Or call `recentEvents()` anywhere, with or without Nest:
+
+```ts
+import { recentEvents } from '@dudousxd/nestjs-diagnostics';
+
+recentEvents({ traceId: 'req-42' });
+```
+
+Both return the newest events first. `recentEvents()` returns `[]` when the buffer is off; `DiagnosticsRecentEvents.enabled` tells you whether it runs.
+
+| Filter | Matches |
+| --- | --- |
+| `lib` | the emitting library, e.g. `'durable'` or `'resilience'` |
+| `event` | an exact event name, a `RegExp`, or its string form `'/run\\./'` |
+| `traceId` | events of one trace |
+| `limit` | how many to return (default 20) |
+| `offset` | how many of the newest matches to skip, for paging |
+
+## What an entry holds
+
+```ts
+{
+  id: '0b7c…',            // the envelope id
+  ts: 1731400000000,
+  lib: 'durable',
+  event: 'run.failed',
+  traceId: 'req-42',
+  durationMs: 12,          // when the event has one
+  source: 'nestjs',        // only on first-party nestjs:* events
+  payload: { runId: 'r1', token: '[redacted]' },
+  phase: 'end',            // trace() spans: start, end, asyncEnd or error
+  spanId: '…',             // shared by every phase of one span
+  result: …,               // a span's result
+  error: { name: 'TypeError', message: '…' },
+}
+```
+
+Payloads are sanitized before they are stored:
+
+- keys that look secret (`password`, `token`, `secret`, `authorization`, `cookie`, `apiKey`, `credential`, `privateKey`) become `'[redacted]'`, at any depth;
+- a payload over 2 KB of JSON becomes `{ truncated: true, bytes, preview }`;
+- dates, maps, sets, bigints, errors and cycles are turned into JSON-safe values.
+
+## Without the module
+
+```ts
+import { startRecentEvents, stopRecentEvents } from '@dudousxd/nestjs-diagnostics';
+
+startRecentEvents(200);
+// …
+stopRecentEvents();
+```
+
+The buffer is process-wide: every copy of the package loaded in the process reads the same one.

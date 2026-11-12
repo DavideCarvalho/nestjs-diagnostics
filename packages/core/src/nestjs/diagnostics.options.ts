@@ -24,6 +24,16 @@ export interface DiagnosticsModuleOptions<
   transports?: TTransports;
   /** Unique id of THIS process, for echo suppression. Default a random id. */
   nodeId?: string;
+  /**
+   * Keep the last diagnostics events of this process in memory (`aviary:*` events and span phases,
+   * and first-party `nestjs:*` events), with secret-looking keys redacted and payloads cut to 2 KB.
+   * Read them with `recentEvents()` or the `DiagnosticsRecentEvents` provider.
+   *
+   * The buffer subscribes to every channel, so `emit` always builds its envelope while it runs.
+   * Default: on unless `NODE_ENV` is `'production'`. `true` or `{ size }` turns it on everywhere
+   * (default size 500); `false` turns it off.
+   */
+  recent?: boolean | { size?: number };
 }
 
 /** Async configuration: build the options (and your Redis clients) from DI. */

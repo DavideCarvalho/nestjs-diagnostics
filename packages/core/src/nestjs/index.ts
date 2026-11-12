@@ -17,6 +17,7 @@ export {
   type RegisteredListener,
   UnknownDiagnosticListenerError,
 } from './diagnostics.explorer.js';
+export { DiagnosticsRecentEvents, resolveRecentSize } from './recent-events.service.js';
 export type { DiagnosticsRole } from './role.js';
 export type {
   DeliveredEvent,

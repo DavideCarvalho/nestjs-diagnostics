@@ -6,6 +6,7 @@ import {
   type DiagnosticsModuleAsyncOptions,
   type DiagnosticsModuleOptions,
 } from './diagnostics.options.js';
+import { DiagnosticsRecentEvents } from './recent-events.service.js';
 import type { TransportProvider } from './transports.js';
 
 @Module({})
@@ -21,7 +22,12 @@ export class DiagnosticsModule {
       module: DiagnosticsModule,
       global: true,
       imports: [DiscoveryModule],
-      providers: [{ provide: DIAGNOSTICS_OPTIONS, useValue: options }, DiagnosticsExplorer],
+      providers: [
+        { provide: DIAGNOSTICS_OPTIONS, useValue: options },
+        DiagnosticsExplorer,
+        DiagnosticsRecentEvents,
+      ],
+      exports: [DiagnosticsRecentEvents],
     };
   }
 
@@ -38,7 +44,9 @@ export class DiagnosticsModule {
           inject: (options.inject ?? []) as never,
         },
         DiagnosticsExplorer,
+        DiagnosticsRecentEvents,
       ],
+      exports: [DiagnosticsRecentEvents],
     };
   }
 }
