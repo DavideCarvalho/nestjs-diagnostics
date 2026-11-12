@@ -1,5 +1,26 @@
 # @dudousxd/nestjs-diagnostics-redis
 
+## 0.3.0
+
+### Minor Changes
+
+- [#81](https://github.com/DavideCarvalho/nestjs-diagnostics/pull/81) [`ebdacd0`](https://github.com/DavideCarvalho/nestjs-diagnostics/commit/ebdacd09676892eca5bf2d359b6edd8079600015) Thanks [@DavideCarvalho](https://github.com/DavideCarvalho)! - Listeners with delivery transports and `role`.
+
+  - Every envelope from `emit` and `trace` carries a unique `id` (a UUID). Relays keep it, so the same event has the same `id` in every process.
+  - `@OnDiagnostic(lib, event?)` accepts a `RegExp` for `event`, and checks the handler's parameter against the `ChannelRegistry` payload for registered channels. Each listener has a stable id, `<ClassName>#<method>`; two listener classes with the same name fail the bootstrap.
+  - `DiagnosticsModule.forRoot({ default, transports, role, nodeId })` and `forRootAsync(...)` select how listeners run across processes, with the `transports` factory:
+    - `transports.redis({ pub, sub })`: broadcast over Redis pub/sub, best-effort.
+    - `transports.queue({ connection })`: one BullMQ job per `(listener, event)`, retried when the handler throws (optional peer `bullmq`).
+    - `transports.durable(options)`: one durable run per `(listener, event)` through `@dudousxd/nestjs-durable-diagnostics/delivery`, imported only when selected; bootstrap fails with a clear message when it is missing or durable is not configured.
+      With `queue` and `durable`, delivery happens once, from the emitting process.
+  - `role: 'all' | 'api' | 'worker'`: `'api'` emits and hands work to the transport but never consumes or runs listeners. `'api'`/`'worker'` without a `default` transport fail the bootstrap.
+  - The Redis relay now lives in `@dudousxd/nestjs-diagnostics` (`createDiagnosticsRedisRelay`); `@dudousxd/nestjs-diagnostics-redis` re-exports it. It takes `receive: false` for a publish-only relay (then `sub` is optional), and marks re-emitted copies (`isRelayed`).
+
+### Patch Changes
+
+- Updated dependencies [[`ebdacd0`](https://github.com/DavideCarvalho/nestjs-diagnostics/commit/ebdacd09676892eca5bf2d359b6edd8079600015)]:
+  - @dudousxd/nestjs-diagnostics@0.9.0
+
 ## 0.2.5
 
 ### Patch Changes
