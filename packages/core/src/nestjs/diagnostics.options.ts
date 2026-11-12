@@ -34,6 +34,11 @@ export interface DiagnosticsModuleOptions<
    * (default size 500); `false` turns it off.
    */
   recent?: boolean | { size?: number };
+  /**
+   * Register the diagnostics developer tools (channels, listeners, recent events) on the Aviary dev
+   * MCP endpoint of `@dudousxd/nestjs-agent-mcp-server`. Default `true`; `false` leaves them out.
+   */
+  devTools?: boolean;
 }
 
 /** Async configuration: build the options (and your Redis clients) from DI. */

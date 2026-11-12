@@ -17,6 +17,18 @@ export {
   type RegisteredListener,
   UnknownDiagnosticListenerError,
 } from './diagnostics.explorer.js';
+export {
+  DEV_TOOLS_SLOT,
+  type DevToolCall,
+  type DevToolInputProperty,
+  type DevToolInputSchema,
+  type DevToolsRegistration,
+  DiagnosticsDevTools,
+  type DiagnosticsDevTool,
+  type DiagnosticsDevToolsDeps,
+  diagnosticsDevTools,
+  registerDiagnosticsDevTools,
+} from './dev-tools.js';
 export { DiagnosticsRecentEvents, resolveRecentSize } from './recent-events.service.js';
 export type { DiagnosticsRole } from './role.js';
 export type {
@@ -33,7 +45,9 @@ export {
   type RedisTransportConfig,
   type TransportContext,
   type TransportHandle,
+  type TransportKind,
   type TransportProvider,
+  transportKind,
   transports,
 } from './transports.js';
 export { InjectCapability } from '../inject-capability.js';
