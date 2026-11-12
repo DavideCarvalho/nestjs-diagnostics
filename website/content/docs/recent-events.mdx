@@ -87,6 +87,8 @@ Payloads are sanitized before they are stored:
 - a payload over 2 KB of JSON becomes `{ truncated: true, bytes, preview }`;
 - dates, maps, sets, bigints, errors and cycles are turned into JSON-safe values.
 
+An async `trace()` span records three entries with the same `spanId`: `start`, then `end` when the function returns its promise (no `result` yet), then `asyncEnd` with the `result` (or `error`) when it settles. The span is over at `asyncEnd`.
+
 ## Without the module
 
 ```ts

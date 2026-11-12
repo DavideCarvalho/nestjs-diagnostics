@@ -136,6 +136,15 @@ describe('RecentEventsBuffer', () => {
     expect(b.size).toBe(20);
   });
 
+  it('an invalid size leaves the running buffer recording', () => {
+    const running = startRecentEvents(10);
+    expect(() => startRecentEvents(0)).toThrow(/positive integer/);
+    expect(recentEventsBuffer()).toBe(running);
+    expect(running.started).toBe(true);
+    emit('still', 'here', {});
+    expect(recentEvents()).toHaveLength(1);
+  });
+
   it('rejects a size that is not a positive integer', () => {
     expect(() => new RecentEventsBuffer(0)).toThrow(/positive integer/);
     expect(() => new RecentEventsBuffer(1.5)).toThrow(/positive integer/);
@@ -217,6 +226,8 @@ describe('DiagnosticsModule recent option', () => {
     expect(resolveRecentSize(true)).toBe(500);
     expect(resolveRecentSize({ size: 50 })).toBe(50);
     expect(resolveRecentSize({})).toBe(500);
+    expect(() => resolveRecentSize({ size: 0 })).toThrow(/positive integer/);
+    expect(() => resolveRecentSize({ size: 1.5 })).toThrow(/positive integer/);
     process.env.NODE_ENV = 'development';
     expect(resolveRecentSize(false)).toBeNull();
   });
@@ -268,7 +279,7 @@ describe('DiagnosticsModule recent option', () => {
     await app.close();
   });
 
-  it('fails the boot on a bad size', async () => {
-    await expect(boot({ recent: { size: 0 } })).rejects.toThrow(/positive integer/);
+  it('fails at forRoot() on a bad size', async () => {
+    expect(() => DiagnosticsModule.forRoot({ recent: { size: 0 } })).toThrow(/positive integer/);
   });
 });

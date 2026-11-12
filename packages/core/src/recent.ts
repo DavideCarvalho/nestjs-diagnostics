@@ -28,7 +28,11 @@ export interface RecentEvent {
   source?: 'nestjs';
   /** The payload with secret-looking keys replaced, or a `{ truncated, bytes, preview }` cut. */
   payload: unknown;
-  /** For `trace()` spans: the phase (`start`, `end`, `asyncEnd`, `error`). Absent on `emit` events. */
+  /**
+   * For `trace()` spans: the phase (`start`, `end`, `asyncEnd`, `error`). Absent on `emit` events.
+   * An async span records `start`, then `end` when the function returns its promise (no `result`),
+   * then `asyncEnd` (or `error`) when it settles: the span is over at `asyncEnd`, not at `end`.
+   */
   phase?: SpanPhase;
   /** For `trace()` spans: the id every phase of one span shares. */
   spanId?: string;
@@ -301,8 +305,9 @@ export function startRecentEvents(size = DEFAULT_RECENT_SIZE): RecentEventsBuffe
     current.start();
     return current;
   }
-  current?.stop();
+  // Built first: an invalid size throws before the running buffer is touched.
   const buffer = new RecentEventsBuffer(size);
+  current?.stop();
   buffer.start();
   (globalThis as RecentHolder)[RECENT_KEY] = buffer;
   return buffer;

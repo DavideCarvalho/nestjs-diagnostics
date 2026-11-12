@@ -6,7 +6,7 @@ import {
   type DiagnosticsModuleAsyncOptions,
   type DiagnosticsModuleOptions,
 } from './diagnostics.options.js';
-import { DiagnosticsRecentEvents } from './recent-events.service.js';
+import { DiagnosticsRecentEvents, resolveRecentSize } from './recent-events.service.js';
 import type { TransportProvider } from './transports.js';
 
 @Module({})
@@ -18,6 +18,8 @@ export class DiagnosticsModule {
   static forRoot<TTransports extends Record<string, TransportProvider>>(
     options: DiagnosticsModuleOptions<TTransports> = {},
   ): DynamicModule {
+    // Fail at forRoot() on a bad `recent.size`, not mid-init.
+    resolveRecentSize(options.recent);
     return {
       module: DiagnosticsModule,
       global: true,

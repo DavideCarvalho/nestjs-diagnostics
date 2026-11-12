@@ -23,7 +23,15 @@ import { DIAGNOSTICS_OPTIONS, type DiagnosticsModuleOptions } from './diagnostic
 export function resolveRecentSize(recent: DiagnosticsModuleOptions['recent']): number | null {
   if (recent === false) return null;
   if (recent === true) return DEFAULT_RECENT_SIZE;
-  if (typeof recent === 'object' && recent !== null) return recent.size ?? DEFAULT_RECENT_SIZE;
+  if (typeof recent === 'object' && recent !== null) {
+    const size = recent.size ?? DEFAULT_RECENT_SIZE;
+    if (!Number.isInteger(size) || size < 1) {
+      throw new Error(
+        `@dudousxd/nestjs-diagnostics: recent.size must be a positive integer (got ${String(size)})`,
+      );
+    }
+    return size;
+  }
   return process.env.NODE_ENV === 'production' ? null : DEFAULT_RECENT_SIZE;
 }
 
@@ -42,7 +50,6 @@ export class DiagnosticsRecentEvents implements OnModuleInit, OnApplicationShutd
   private owned: RecentEventsBuffer | null = null;
 
   constructor(@Optional() @Inject(DIAGNOSTICS_OPTIONS) options?: DiagnosticsModuleOptions) {
-    // Validated here, so a bad size fails the boot instead of the first read.
     this.size = resolveRecentSize(options?.recent);
   }
 
