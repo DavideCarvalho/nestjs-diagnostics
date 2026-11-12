@@ -1,5 +1,11 @@
 # @dudousxd/nestjs-diagnostics-telescope
 
+## 0.7.5
+
+### Patch Changes
+
+- [#82](https://github.com/DavideCarvalho/nestjs-diagnostics/pull/82) [`e18c051`](https://github.com/DavideCarvalho/nestjs-diagnostics/commit/e18c05114c8e18bed409f59b43477b9efdf9cd24) Thanks [@DavideCarvalho](https://github.com/DavideCarvalho)! - Accept `@dudousxd/nestjs-telescope` 3.x as a peer (tested against 3.0.0).
+
 ## 0.7.4
 
 ### Patch Changes
