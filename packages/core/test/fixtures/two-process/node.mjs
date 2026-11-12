@@ -23,7 +23,8 @@ const { Redis } = await import('ioredis');
 
 const out = (message) => process.stdout.write(`${JSON.stringify({ name, ...message })}\n`);
 
-const redis = redisUrl ? new Redis(redisUrl, { maxRetriesPerRequest: null }) : null;
+const redis =
+  redisUrl && mode !== 'durable' ? new Redis(redisUrl, { maxRetriesPerRequest: null }) : null;
 
 // The listener every process registers. In queue mode the FIRST attempt across all processes
 // fails (a Redis SET NX decides which one), so the spec sees the retry.

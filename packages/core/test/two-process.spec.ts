@@ -32,6 +32,8 @@ class Node {
       for (const wake of this.waiters.splice(0)) wake();
     });
     this.child.stderr.on('data', (chunk) => process.stderr.write(chunk));
+    // The child may exit on its own (a failed bootstrap): ignore writes that race with that.
+    this.child.stdin.on('error', () => {});
   }
 
   async waitFor(predicate: (messages: Message[]) => boolean, timeoutMs = 15_000): Promise<void> {
