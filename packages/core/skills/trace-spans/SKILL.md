@@ -42,7 +42,8 @@ export class AuthzService {
 ```
 
 Span events ride `aviary:<lib>:<event>:<phase>`; the base `aviary:<lib>:<event>`
-name is what gets registered for discovery. A `SpanEvent` carries `v`, `ts`,
+name is what gets registered for discovery. A `SpanEvent` carries `v`, a unique
+`id` (a UUID stamped by `trace`; correlate phases with `spanId`), `ts`,
 `lib`, `event`, `phase`, a per-span `spanId`, optional `traceId`, and
 `payload` / `result` / `error` / `durationMs` depending on the phase.
 

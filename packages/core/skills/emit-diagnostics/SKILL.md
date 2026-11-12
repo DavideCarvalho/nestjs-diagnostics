@@ -1,6 +1,6 @@
 ---
 name: emit-diagnostics
-description: Emit observability events from @dudousxd/nestjs-diagnostics with emit(lib, event, payload, opts) over node:diagnostics_channel on aviary:<lib>:<event>. Covers the DiagnosticEvent envelope (v, ts, lib, event, traceId, payload, durationMs), zero-overhead hasSubscribers gating, EmitOptions sampling and durationMs, typed ChannelRegistry declaration merging, and trace correlation via setContextAccessor / CONTEXT_ACCESSOR. No module to register; the core barrel is framework-agnostic.
+description: Emit observability events from @dudousxd/nestjs-diagnostics with emit(lib, event, payload, opts) over node:diagnostics_channel on aviary:<lib>:<event>. Covers the DiagnosticEvent envelope (v, id, ts, lib, event, traceId, payload, durationMs), zero-overhead hasSubscribers gating, EmitOptions sampling and durationMs, typed ChannelRegistry declaration merging, and trace correlation via setContextAccessor / CONTEXT_ACCESSOR. No module to register; the core barrel is framework-agnostic.
 license: MIT
 metadata:
   type: core
@@ -47,6 +47,7 @@ standard `DiagnosticEvent` envelope:
 ```ts
 interface DiagnosticEvent<TPayload = unknown> {
   v?: number;        // SCHEMA_VERSION stamped by emit (currently 1)
+  id?: string;       // unique UUID stamped by emit; relays keep it so the same event has the same id in every process
   ts: number;        // Date.now() at publish time
   lib: string;       // the <lib>, e.g. "billing"
   event: string;     // the <event>, e.g. "invoice-paid"
@@ -189,7 +190,9 @@ emit('billing', 'invoice-paid', payload);
 ```
 
 `emit` returns `void` and swallows every internal error so a broken observer can
-never break the producer. There is no delivery guarantee, ordering, or replay.
+never break the producer. `emit` itself offers no ack, ordering, or replay;
+`@OnDiagnostic` delivery guarantees (retry, run-once) depend on the selected
+transport (see the `react-with-on-diagnostic` skill).
 Source: `packages/core/src/channel.ts` (`emit` `try/catch`).
 
 ### Putting the prefix or colons into lib/event yourself
