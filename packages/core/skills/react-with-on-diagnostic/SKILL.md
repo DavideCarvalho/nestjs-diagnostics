@@ -1,6 +1,6 @@
 ---
 name: react-with-on-diagnostic
-description: React to diagnostics events inside a NestJS app with @OnDiagnostic(lib, event?) from @dudousxd/nestjs-diagnostics/nestjs, wired by DiagnosticsModule.forRoot(). Decorate provider methods to handle one exact aviary:<lib>:<event> channel, one RegExp-matched subset, or every aviary:<lib>:* channel (current and future). Handlers run on the DI-resolved instance; without a delivering transport sync throws and async rejections are logged and swallowed so a reaction can never break the synchronous emit() that triggered it (queue/durable transports instead propagate the error for retry).
+description: React to diagnostics events inside a NestJS app with @OnDiagnostic(lib, event?) from @dudousxd/nestjs-diagnostics/nestjs, wired by DiagnosticsModule.forRoot()/forRootAsync({ default, transports, role, nodeId }). Decorate provider methods to handle one exact aviary:<lib>:<event> channel, a RegExp match, or every aviary:<lib>:* channel (current and future). The handler parameter is checked against the ChannelRegistry payload for registered channels; each listener has a stable <ClassName>#<method> id. Handlers run on the DI-resolved instance; without a delivering transport sync throws and async rejections are logged and swallowed, while queue/durable transports propagate the handler error for retry with delivery once from the emitting process. role 'api' never consumes or runs listeners.
 license: MIT
 metadata:
   type: core
@@ -52,11 +52,16 @@ export class Reactions {
 }
 ```
 
-Each listener has a stable id, `<ClassName>#<method>`; two listener classes
-with the same name fail the bootstrap. For a channel declared in the
-`ChannelRegistry`, the handler's parameter is checked against the declared
-payload type. Listeners only see `emit` point events; `trace` span phases go
-to raw channel subscribers, not `@OnDiagnostic`.
+For a channel declared in the `ChannelRegistry`, the handler's parameter is
+checked against the declared payload (see `DiagnosticEventOf`); untyped
+channels accept any annotation. Each listener has a stable id,
+`<ClassName>#<method>`; two listener classes with the same name fail the
+bootstrap. To run listeners across processes, pass
+`{ default, transports, role, nodeId }` to `forRoot()` (or `forRootAsync()`):
+`transports.redis()`, `transports.queue()`, or `transports.durable()` select
+the delivery, and `role: 'api'` emits and hands work to the transport but
+never consumes or runs listeners (`'api'`/`'worker'` without a `default`
+transport fail the bootstrap).
 
 Source: `packages/core/src/nestjs/diagnostics.module.ts`,
 `packages/core/src/nestjs/on-diagnostic.decorator.ts`,
@@ -64,12 +69,12 @@ Source: `packages/core/src/nestjs/diagnostics.module.ts`,
 
 ## Core patterns
 
-### 1. Exact channel, pattern, or library wildcard
+### 1. Exact channel, RegExp match, or library wildcard
 
 - `@OnDiagnostic('resilience', 'circuit-opened')` subscribes to the exact
   `aviary:resilience:circuit-opened` channel.
-- `@OnDiagnostic('durable', /^run\./)` subscribes to every `aviary:durable:*`
-  channel whose event name matches (current and future alike).
+- `@OnDiagnostic('durable', /^run\./)` subscribes to every
+  `aviary:durable:*` channel whose event name matches the `RegExp`.
 - `@OnDiagnostic('resilience')` (no `event`) subscribes to **every**
   `aviary:resilience:*` channel — both those already registered at bootstrap and
   any that appear later (a library's first `emit('resilience', 'newevent', …)`).
@@ -79,6 +84,12 @@ The explorer scans providers on `onApplicationBootstrap`, then keeps an
 automatically.
 
 Source: `packages/core/src/nestjs/diagnostics.explorer.ts` (`onApplicationBootstrap`).
+
+Each discovered method gets a stable listener id, `<ClassName>#<method>`,
+which delivering transports (`queue`, `durable`) use to route work; keep it
+stable while deliveries may be pending. Two listener classes with the same
+name fail the bootstrap. `role: 'api'` never consumes or runs listeners —
+it emits and hands work to the transport.
 
 ### 2. Handlers run on the DI-resolved instance
 
@@ -99,45 +110,19 @@ export class AlertReactions {
 
 Source: `packages/core/src/nestjs/diagnostics.explorer.ts` (`invoke` calls `fn.call(instance, event)`).
 
-### 3. Never-throw isolation (local and broadcast only)
+### 3. Never-throw isolation without a delivering transport
 
 `diagnostics_channel.publish` is **synchronous**, so a subscriber that throws
-would propagate into the emitter's call stack. Without a delivering transport
-(local listeners, or the `redis` broadcast transport) the explorer's `invoke`
-path catches synchronous throws and attaches a `.catch` to rejected promises,
-logging both — a reaction can never break the `emit()` that triggered it.
-Async handlers are therefore fire-and-forget (publish cannot await).
+would propagate into the emitter's call stack. Without a delivering transport,
+the explorer's `invoke` path
+catches synchronous throws and attaches a `.catch` to rejected promises, logging
+both — a reaction can never break the `emit()` that triggered it. Async handlers
+are therefore fire-and-forget (publish cannot await). With a delivering
+transport (`queue`, `durable`), delivery happens once, from the emitting
+process, and the handler's error rejects `invoke` so the transport can retry
+instead of being swallowed.
 
-With the `queue` or `durable` delivering transports, delivery happens once,
-from the emitting process, and the handler's error instead rejects the
-delivery so the transport can retry it (at-least-once). `role: 'api'` never
-runs listeners at all: it emits and hands work to the transport.
-
-Source: `packages/core/src/nestjs/diagnostics.explorer.ts` (`invoke`, `onEvent`, `deliver`), `packages/core/src/nestjs/transports.ts`.
-
-### 4. Cross-process delivery via `forRoot({ default, transports, role })`
-
-Without a `default` transport, listeners run in the emitting process. To run
-them across processes, build transports with the `transports` factory and pick
-one as `default` (or build the options from DI with `forRootAsync`):
-
-```ts
-DiagnosticsModule.forRoot({
-  default: 'queue',
-  transports: {
-    redis: transports.redis({ pub, sub }),
-    queue: transports.queue({ connection: { host: 'localhost', port: 6379 } }),
-    durable: transports.durable({ retries: 5 }),
-  },
-  role: 'all', // 'all' | 'api' | 'worker'; nodeId defaults to a random id
-});
-```
-
-`role: 'api'` emits and hands work to the transport but never consumes or
-runs listeners; `'api'`/`'worker'` without a `default` transport, an unknown
-`role`, or a `default` naming no entry of `transports` fails the bootstrap.
-
-Source: `packages/core/src/nestjs/diagnostics.module.ts`, `packages/core/src/nestjs/diagnostics.options.ts`, `packages/core/src/nestjs/transports.ts`, `packages/core/src/nestjs/role.ts`.
+Source: `packages/core/src/nestjs/diagnostics.explorer.ts` (`invoke`, `onEvent`, `deliver`).
 
 ## Common mistakes
 
@@ -184,24 +169,23 @@ Source: `packages/core/src/nestjs/diagnostics.explorer.ts` (`discovery.getProvid
 ### Throwing in a handler expecting the framework to retry
 
 ```ts
-// Wrong with local/redis delivery — assuming a throw bubbles up or is retried.
+// Wrong — assuming a throw bubbles up or triggers a retry (without a delivering transport it will NOT — it is logged and swallowed).
 @OnDiagnostic('billing', 'invoice-paid')
 onPaid(e: DiagnosticEvent) {
-  throw new Error('will be retried'); // it will NOT — it is logged and swallowed
+  throw new Error('will be retried'); // only retried with transports.queue()/durable()
 }
 ```
 
 ```ts
-// Correct without a delivering transport — handle failures inside the reaction; it is fire-and-forget.
+// Correct — handle failures inside the reaction when running without a delivering transport; it is fire-and-forget.
 @OnDiagnostic('billing', 'invoice-paid')
 async onPaid(e: DiagnosticEvent) {
   try { await this.work(e); } catch (err) { this.logger.warn(err); }
 }
 ```
 
-Without a delivering transport the explorer swallows throws/rejections by
-design, so emission stays safe — there is no delivery guarantee, retry, or
-replay. With `transports.queue()` / `transports.durable()` the same throw
-instead fails the job/run and is retried (at-least-once, idempotent per event
-`id`); delivery happens once, from the emitting process.
+Without a delivering transport, the explorer swallows throws/rejections by design, so emission stays safe — there
+is no delivery guarantee, retry, or replay. With `transports.queue()` or
+`transports.durable()`, the handler error propagates to the transport and is
+retried (delivery happens once, from the emitting process).
 Source: `packages/core/src/nestjs/diagnostics.explorer.ts` (`invoke`, `onEvent`).
