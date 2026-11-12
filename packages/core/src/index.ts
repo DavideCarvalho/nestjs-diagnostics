@@ -30,6 +30,14 @@ export {
   subscribeOfficial,
 } from './official.js';
 export {
+  type ChannelRef,
+  createDiagnosticsRedisRelay,
+  type DiagnosticsRedisRelayOptions,
+  type RedisLike,
+  type RedisPipelineLike,
+} from './redis-relay.js';
+export { isRelayed, publishRelayed } from './relayed.js';
+export {
   onChannelRegistered,
   registerChannel,
   registeredChannels,

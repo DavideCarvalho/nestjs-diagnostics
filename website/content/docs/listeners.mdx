@@ -1,0 +1,185 @@
+---
+title: Listeners and transports
+description: React to diagnostics events with @OnDiagnostic, and choose how reliably listeners run across processes.
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+Libraries publish with `emit` and `trace`. Your app reacts with listeners: provider methods decorated with `@OnDiagnostic`. The transport you select decides where a listener runs and what happens when it throws.
+
+## Listeners
+
+Register `DiagnosticsModule` once at the app root, then decorate provider methods:
+
+```ts
+import { Injectable, Module } from '@nestjs/common';
+import type { DiagnosticEvent } from '@dudousxd/nestjs-diagnostics';
+import {
+  type DiagnosticEventOf,
+  DiagnosticsModule,
+  OnDiagnostic,
+} from '@dudousxd/nestjs-diagnostics/nestjs';
+
+@Injectable()
+export class TrackAgentRun {
+  @OnDiagnostic('agent', 'run.finished')
+  async handle(event: DiagnosticEventOf<'agent', 'run.finished'>) {
+    // event.payload is typed from the ChannelRegistry
+  }
+
+  @OnDiagnostic('durable', /^run\./) // every durable event whose name matches
+  async onRun(event: DiagnosticEvent) {}
+
+  @OnDiagnostic('resilience') // every resilience event, current and future
+  async onAnything(event: DiagnosticEvent) {}
+}
+
+@Module({
+  imports: [DiagnosticsModule.forRoot()],
+  providers: [TrackAgentRun],
+})
+export class AppModule {}
+```
+
+- `event` takes an exact name, a `RegExp`, or nothing (every event of the lib).
+- For a channel declared in the `ChannelRegistry`, `lib` and `event` autocomplete and the handler's parameter is checked against the declared payload. Untyped channels accept any annotation. A library (or your app) declares its channels like this:
+
+  ```ts
+  declare module '@dudousxd/nestjs-diagnostics' {
+    interface ChannelRegistry {
+      agent: { 'run.finished': { runId: string; tokens: number } };
+    }
+  }
+  ```
+- Every listener has a stable id, `<ClassName>#<method>`. Delivering transports route work by this id, so every process must register the same listeners, and you should not rename a listener class while deliveries for it may still be queued. Two listener classes with the same name fail the bootstrap.
+- Each envelope carries a unique `id` (a UUID). It is the same in every process the event reaches; use it to make a listener idempotent.
+
+Listeners only see events from `emit`. Span events from `trace` go to observers (raw `diagnostics_channel` subscribers, Telescope, OpenTelemetry), which keep working the same way whatever transport you choose.
+
+## Transports
+
+Without a transport, listeners run in the process that emitted the event. To run them across processes, list transports and pick a `default`:
+
+```ts
+import { Module } from '@nestjs/common';
+import { DiagnosticsModule, transports } from '@dudousxd/nestjs-diagnostics/nestjs';
+import Redis from 'ioredis';
+
+const redis = new Redis(process.env.REDIS_URL!);
+
+@Module({
+  imports: [
+    DiagnosticsModule.forRoot({
+      default: 'queue',
+      transports: {
+        redis: transports.redis({ pub: redis, sub: redis.duplicate() }),
+        queue: transports.queue({ connection: { host: 'localhost', port: 6379 } }),
+        durable: transports.durable({ retries: 5 }),
+      },
+    }),
+  ],
+})
+export class AppModule {}
+```
+
+Only the `default` transport starts. Listing the others costs nothing: their optional dependency is imported only when selected.
+
+Build the options from DI with `forRootAsync`:
+
+```ts
+DiagnosticsModule.forRootAsync({
+  imports: [RedisModule],
+  inject: [REDIS],
+  useFactory: (redis: Redis) => ({
+    default: 'redis',
+    transports: { redis: transports.redis({ pub: redis, sub: redis.duplicate() }) },
+  }),
+});
+```
+
+### Guarantees
+
+| transport | where the listener runs | lost if the process dies? | if the handler throws |
+|---|---|---|---|
+| none (local) | in the emitting process | yes | logged, dropped |
+| `redis` | in every process (broadcast) | yes | logged, dropped |
+| `queue` | in one worker | no, once the job is stored | the job fails and BullMQ retries it (at-least-once) |
+| `durable` | in one durable worker, as a durable run | no, once the run is stored | durable retries with backoff; visible in the durable console; idempotent per event id |
+
+With `queue` and `durable`, delivery happens once, from the process that called `emit`: copies of the event that reached other processes through a relay are not delivered again. Deliveries are handed to the transport after the current event loop turn, in emit order, never on the emitter's call stack. If the transport cannot store them (Redis down), the failure is logged and those deliveries are lost.
+
+### `transports.redis()`
+
+Broadcast over Redis pub/sub. Every process receives the event and runs its own listeners. Best-effort: a process that is down misses the event.
+
+| option | default | |
+|---|---|---|
+| `pub` | required | ioredis client used to publish |
+| `sub` | required unless `role: 'api'` | a separate ioredis client (`pub.duplicate()`) |
+| `libs`, `channels`, `all` | — | forward more events for observers in other processes. Libs that have listeners are always forwarded. |
+| `redisChannel` | `aviary:diagnostics:relay` | Redis channel to relay on |
+
+You own the Redis clients: diagnostics never opens or closes them. Payloads cross as JSON.
+
+### `transports.queue()`
+
+One [BullMQ](https://docs.bullmq.io) job per `(listener, event)`. A handler that throws fails its job, and BullMQ retries it. Requires the optional peer `bullmq`:
+
+```bash
+pnpm add bullmq
+```
+
+| option | default | |
+|---|---|---|
+| `connection` | required | BullMQ connection: `{ host, port }`, or an ioredis client created with `maxRetriesPerRequest: null` |
+| `queue` | `aviary-diagnostics` | queue name |
+| `prefix` | BullMQ's | key prefix |
+| `retries` | `3` | retries after the first attempt |
+| `backoff` | `{ type: 'exponential', delay: 1000 }` | delay between attempts |
+| `concurrency` | `1` | jobs a worker process runs at once |
+| `removeOnComplete` / `removeOnFail` | `true` / `false` | BullMQ job retention |
+
+The job id is `diag.<event id>.<listener id>`, so the same delivery is never queued twice. Every process that is not `role: 'api'` runs a worker for the queue: you don't add a BullMQ processor yourself.
+
+### `transports.durable()`
+
+Each `(listener, event)` becomes a durable run, retried with backoff and idempotent per event id. Requires `@dudousxd/nestjs-durable-diagnostics` and a configured `DurableModule`.
+
+| option | |
+|---|---|
+| `retries` | max attempts before the run fails |
+| `backoff` | `'fixed'` or `'exp'` |
+| `backoffMs` / `backoffMaxMs` | base delay and the cap of the exponential delay, in ms |
+| `jitter` | add random jitter to the delay |
+
+<Callout type="warn" title="Fails at bootstrap">
+When `durable` is the `default` and `@dudousxd/nestjs-durable-diagnostics` is not installed, is too old, or durable is not configured in the app, `app.init()` fails with a message saying which. Pick another transport, or install and configure durable.
+</Callout>
+
+## Split deployments: `role`
+
+`role` says which half of a split deployment this process is:
+
+```ts
+DiagnosticsModule.forRoot({
+  role: process.env.PROCESS_ROLE === 'worker' ? 'worker' : 'api',
+  default: 'queue',
+  transports: { queue: transports.queue({ connection }) },
+});
+```
+
+| role | what this process does |
+|---|---|
+| `'all'` (default) | emits, forwards, consumes and runs listeners |
+| `'api'` | emits and hands listener work to the transport; never consumes events from other processes and never runs a listener |
+| `'worker'` | consumes and runs listeners (diagnostics mounts no HTTP surface, so it does what `'all'` does) |
+
+Per transport:
+
+| transport | `'api'` | `'worker'` / `'all'` |
+|---|---|---|
+| `redis` | publishes, never subscribes; listeners don't run here | publishes, subscribes, runs listeners for every event it receives |
+| `queue` | adds jobs, starts no BullMQ worker | adds jobs for what it emits, runs a BullMQ worker |
+| `durable` | starts durable runs, runs none | starts durable runs; durable's worker runs them |
+
+`'api'` and `'worker'` need a `default` transport: without one, nothing carries events between the halves, so the bootstrap fails. An unknown `role`, or a `default` that names no entry of `transports`, fails the bootstrap too.

@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import diagnostics_channel, { type Channel } from 'node:diagnostics_channel';
 import { resolveTraceId } from './context-accessor.js';
 import { onRegistryReset, registerChannel } from './registry.js';
@@ -80,7 +81,7 @@ export function getChannel(lib: string, event: string): Channel {
  * - When `opts.sample` is given, it is consulted AFTER the `hasSubscribers` gate
  *   and BEFORE the envelope is built: a falsy result sheds this event without
  *   allocating anything. Default (no `sample`) always publishes when subscribed.
- * - The envelope carries the current {@link SCHEMA_VERSION} as `v`.
+ * - The envelope carries the current {@link SCHEMA_VERSION} as `v` and a fresh UUID as `id`.
  * - Never throws: emitting observability must not break the caller.
  *
  * ```ts
@@ -109,6 +110,7 @@ export function emit<TLib extends LibOf, TEvent extends EventOf<TLib>>(
     const traceId = opts?.traceId ?? resolveTraceId();
     const envelope: DiagnosticEvent = {
       v: SCHEMA_VERSION,
+      id: randomUUID(),
       ts: Date.now(),
       lib,
       event,

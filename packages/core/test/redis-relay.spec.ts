@@ -1,11 +1,7 @@
-import {
-  type DiagnosticEvent,
-  emit,
-  getChannel,
-  resetRegistry,
-} from '@dudousxd/nestjs-diagnostics';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createDiagnosticsRedisRelay } from '../src/relay.js';
+import { type DiagnosticEvent, emit, getChannel, resetRegistry } from '../src/index.js';
+import { createDiagnosticsRedisRelay } from '../src/redis-relay.js';
+import { isRelayed } from '../src/relayed.js';
 import { FakeHub, FakeRedis } from './fake-redis.js';
 
 const RELAY_CHANNEL = 'aviary:diagnostics:relay';
@@ -372,5 +368,40 @@ describe('createDiagnosticsRedisRelay', () => {
         process.off('uncaughtException', uncaught);
       }
     });
+  });
+
+  it('keeps the envelope id and marks the re-emitted copy as relayed', async () => {
+    const hub = new FakeHub();
+    teardowns.push(
+      createDiagnosticsRedisRelay({
+        pub: new FakeRedis(hub),
+        sub: new FakeRedis(hub),
+        libs: ['agent'],
+        nodeId: 'A',
+      }),
+    );
+    const received: Array<{ id: string | undefined; relayed: boolean }> = [];
+    const listener = (msg: unknown) =>
+      received.push({ id: (msg as DiagnosticEvent).id, relayed: isRelayed(msg as object) });
+    getChannel('agent', 'run.finished').subscribe(listener);
+    new FakeRedis(hub).publish(
+      RELAY_CHANNEL,
+      JSON.stringify({
+        node: 'B',
+        env: { id: 'evt-9', ts: 1, lib: 'agent', event: 'run.finished', payload: {} },
+      }),
+    );
+    emit('agent', 'run.finished', {});
+    getChannel('agent', 'run.finished').unsubscribe(listener);
+    expect(received[0]).toEqual({ id: 'evt-9', relayed: true });
+    expect(received[1]?.relayed).toBe(false);
+  });
+
+  it('a publish-only relay (receive: false) never subscribes', () => {
+    const hub = new FakeHub();
+    const sub = new FakeRedis(hub);
+    const subscribe = vi.spyOn(sub, 'subscribe');
+    teardowns.push(createDiagnosticsRedisRelay({ pub: new FakeRedis(hub), sub, receive: false }));
+    expect(subscribe).not.toHaveBeenCalled();
   });
 });

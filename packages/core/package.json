@@ -40,7 +40,9 @@
   "peerDependencies": {
     "@nestjs/common": "^10 || ^11 || ^12",
     "@nestjs/core": "^10 || ^11 || ^12",
-    "reflect-metadata": "^0.2"
+    "reflect-metadata": "^0.2",
+    "bullmq": "^5",
+    "@dudousxd/nestjs-durable-diagnostics": "*"
   },
   "peerDependenciesMeta": {
     "@nestjs/common": {
@@ -50,6 +52,12 @@
       "optional": true
     },
     "reflect-metadata": {
+      "optional": true
+    },
+    "bullmq": {
+      "optional": true
+    },
+    "@dudousxd/nestjs-durable-diagnostics": {
       "optional": true
     }
   },
@@ -63,7 +71,9 @@
     "**/channel.js",
     "**/channel.ts",
     "**/trace.js",
-    "**/trace.ts"
+    "**/trace.ts",
+    "**/relayed.js",
+    "**/relayed.ts"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
@@ -81,6 +91,8 @@
     "@nestjs/testing": "12.3.3",
     "@nestjs/workflows": "0.0.5",
     "@types/node": "20.19.43",
+    "bullmq": "5.81.5",
+    "ioredis": "5.11.1",
     "reflect-metadata": "0.2.2",
     "typescript": "5.9.3",
     "unplugin-swc": "1.6.0",
