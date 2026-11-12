@@ -184,6 +184,35 @@ handler that throws or rejects is logged and swallowed — it can never break th
 code that emitted. `@nestjs/common` + `@nestjs/core` are optional peers; the main
 barrel stays framework-agnostic.
 
+`event` also takes a `RegExp`. Each listener has a stable id, `<ClassName>#<method>`.
+
+### Across processes: transports and `role`
+
+Pick a `default` transport to run listeners across processes:
+
+```ts
+import { DiagnosticsModule, transports } from '@dudousxd/nestjs-diagnostics/nestjs';
+
+DiagnosticsModule.forRoot({
+  role: 'api', // 'all' (default) | 'api' | 'worker'
+  default: 'queue',
+  transports: {
+    redis: transports.redis({ pub: redis, sub: redis.duplicate() }), // broadcast, best-effort
+    queue: transports.queue({ connection: { host: 'localhost', port: 6379 } }), // BullMQ, retried
+    durable: transports.durable({ retries: 5 }), // durable runs (@dudousxd/nestjs-durable-diagnostics)
+  },
+});
+```
+
+| transport | where the listener runs | lost if the process dies? | if the handler throws |
+|---|---|---|---|
+| none (local) | in the emitting process | yes | logged, dropped |
+| `redis` | in every process (broadcast) | yes | logged, dropped |
+| `queue` | in one worker | no | BullMQ retries the job (at-least-once) |
+| `durable` | in one durable worker | no | durable retries with backoff; idempotent per event id |
+
+See the [Listeners and transports](https://davidecarvalho.github.io/aviary/docs/diagnostics/listeners) docs.
+
 ## License
 
 MIT

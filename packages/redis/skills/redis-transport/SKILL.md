@@ -1,6 +1,6 @@
 ---
 name: redis-transport
-description: Relay @dudousxd/nestjs-diagnostics events across processes/pods over Redis pub/sub with @dudousxd/nestjs-diagnostics-redis. DiagnosticsRedisModule.forRootAsync/forRoot({ pub, sub, libs, channels, all }) wires it from DI; createDiagnosticsRedisRelay() is the manual form returning a teardown. Forwards selected local aviary:<lib>:<event> channels to Redis and re-emits remote events locally so @OnDiagnostic fires cross-process. Needs separate pub and sub ioredis connections (redis.duplicate()); loop-safe via nodeId echo suppression; payloads cross as JSON.
+description: "Relay @dudousxd/nestjs-diagnostics events across processes/pods over Redis pub/sub. The relay lives in `@dudousxd/nestjs-diagnostics` (`createDiagnosticsRedisRelay`, re-exported by `@dudousxd/nestjs-diagnostics-redis`) and is started via `DiagnosticsModule` `transports.redis()` or `DiagnosticsRedisModule.forRoot`/`forRootAsync({ pub, sub, receive, libs, channels, all }) wires it from DI; createDiagnosticsRedisRelay() is the manual form returning a teardown. Forwards selected local aviary:<lib>:<event> channels to Redis and re-emits remote events locally so @OnDiagnostic fires cross-process. Needs separate pub and sub ioredis connections (redis.duplicate()) unless `receive: false` publish-only; loop-safe via nodeId echo suppression with re-emitted copies marked (`isRelayed`); envelopes keep their `id`; payloads cross as JSON."
 license: MIT
 metadata:
   type: core
@@ -11,11 +11,15 @@ metadata:
 
 # Cross-process diagnostics over Redis
 
-`@dudousxd/nestjs-diagnostics-redis` is an opt-in **relay**: it forwards selected
+The Redis relay is an opt-in **relay**: it forwards selected
 local `aviary:<lib>:<event>` channels onto Redis pub/sub and re-emits
 Redis-received events back onto the local diagnostics bus — so `@OnDiagnostic`
 handlers and `getChannel(...).subscribe(...)` reactions fire **across
-processes/pods**. The diagnostics core stays in-process and untouched.
+processes/pods**. It lives in `@dudousxd/nestjs-diagnostics`
+(`createDiagnosticsRedisRelay`); `@dudousxd/nestjs-diagnostics-redis`
+re-exports it and provides `DiagnosticsRedisModule`. The same relay also
+starts as `DiagnosticsModule` `transports.redis()` (libs with listeners are
+forwarded automatically).
 
 ## Setup
 
@@ -24,7 +28,9 @@ pnpm add @dudousxd/nestjs-diagnostics-redis @dudousxd/nestjs-diagnostics ioredis
 ```
 
 Supply your own ioredis connections — a publisher and a **separate** subscriber
-(`redis.duplicate()`, since a subscribed connection can't publish). Prefer
+(`redis.duplicate()`, since a subscribed connection can't publish), unless
+`receive: false` for a publish-only relay (then `sub` is optional, e.g. a
+`role: 'api'` process that publishes and never subscribes). Prefer
 `forRootAsync` so the relay's clients come from the same DI container:
 
 ```ts
@@ -52,7 +58,7 @@ export class AppModule {}
 Now an `@OnDiagnostic('durable', 'run.failed')` handler in **another** process
 fires when a worker elsewhere emits it.
 
-Source: `packages/redis/src/diagnostics-redis.module.ts`, `packages/redis/src/relay.ts`.
+Source: `packages/redis/src/diagnostics-redis.module.ts`, `packages/core/src/redis-relay.ts` (re-exported by `packages/redis/src/relay.ts`).
 
 ## Core patterns
 
@@ -75,7 +81,7 @@ DiagnosticsRedisModule.forRoot({
 Wildcard selections subscribe to matching channels at startup and via
 `onChannelRegistered` for ones that appear later.
 
-Source: `packages/redis/src/relay.ts` (`wildcardMatches`, `subscribeRef`, `DiagnosticsRedisRelayOptions`).
+Source: `packages/core/src/redis-relay.ts` (`wildcardMatches`, `subscribeRef`, `DiagnosticsRedisRelayOptions`).
 
 ### 2. Manual relay outside Nest
 
@@ -85,34 +91,40 @@ message handler. It never opens or closes your Redis connections — you own the
 lifecycle:
 
 ```ts
-import { createDiagnosticsRedisRelay } from '@dudousxd/nestjs-diagnostics-redis';
+import { createDiagnosticsRedisRelay } from '@dudousxd/nestjs-diagnostics';
 
 const teardown = createDiagnosticsRedisRelay({
   pub: redis,
   sub: redis.duplicate(),
   libs: ['durable'],
 });
+// publish-only (never subscribes; sub optional):
+// createDiagnosticsRedisRelay({ pub: redis, receive: false, libs: ['durable'] });
 // … later
 teardown();
 ```
 
-Forwarding is batched off the emitter's call stack: `emit()` only queues the
+Re-exported unchanged from `@dudousxd/nestjs-diagnostics-redis`, so the old
+import path keeps working. Forwarding is batched off the emitter's call stack: `emit()` only queues the
 event, and the queue is serialized and published once per event loop turn in emit
-order (one Redis message per event, unchanged wire format) — via a single
+order (one Redis message per event, unchanged wire format, `id` kept) — via a single
 pipeline when the turn queued more than one event and `pub` supports
 `pipeline()`, otherwise one `publish` per message.
 
-Source: `packages/redis/src/relay.ts` (`createDiagnosticsRedisRelay` `forward`/`flush`).
+Source: `packages/core/src/redis-relay.ts` (`createDiagnosticsRedisRelay` `forward`/`flush`).
 
 ### 3. Loop-safety
 
 Each relay tags its publishes with a per-process `nodeId`. The receiver skips its
-own echoes (`node === nodeId`) and a re-emit guard (a `WeakSet`) stops a
-received event from being forwarded back — so two processes never ping-pong. The
+own echoes (`node === nodeId`) and a re-emit guard stops a
+received event from being forwarded back — so two processes never ping-pong.
+Re-emitted copies are marked (`isRelayed`) so delivering transports
+(`queue`, `durable`) deliver only at the origin and never twice; the envelope
+keeps its `id` across the hop. The
 default Redis channel is `aviary:diagnostics:relay` (override with
 `redisChannel`).
 
-Source: `packages/redis/src/relay.ts` (`forward`, `onMessage`, `reEmitting`).
+Source: `packages/core/src/redis-relay.ts` (`forward`, `onMessage`, `reEmitting`), `packages/core/src/relayed.ts` (`isRelayed`).
 
 ## Common mistakes
 
@@ -131,8 +143,9 @@ DiagnosticsRedisModule.forRoot({ pub: redis, sub: redis.duplicate(), libs: ['dur
 ```
 
 ioredis puts a connection that has `subscribe`d into subscriber mode where most
-commands (including `publish`) are rejected — the relay needs two connections.
-Source: `packages/redis/src/relay.ts` (`sub` docs: "separate from `pub`").
+commands (including `publish`) are rejected — the relay needs two connections,
+unless `receive: false` (publish-only, no `sub`).
+Source: `packages/core/src/redis-relay.ts` (`sub` docs: "separate from `pub`").
 
 ### Reading methods/Date on a cross-process payload
 
@@ -154,7 +167,7 @@ onFail(e: DiagnosticEvent<{ failedAt: string }>) {
 Payloads cross the process boundary as JSON: class instances arrive as plain
 objects (no methods/prototype), `Date` as an ISO string. Read fields, not
 behavior, in cross-process handlers.
-Source: `packages/redis/src/relay.ts` (`forward`/`onMessage` JSON), redis README "Notes".
+Source: `packages/core/src/redis-relay.ts` (`forward`/`onMessage` JSON), redis README "Notes".
 
 ### Expecting the module to manage your Redis connection lifecycle
 
@@ -173,4 +186,4 @@ The relay teardown first publishes any queued events, then removes its own
 subscriptions and Redis message handler; it never opens or closes `pub`/`sub`.
 Manage their lifecycle in your own provider.
 Source: `packages/redis/src/diagnostics-redis.module.ts` (`DiagnosticsRedisStarter` teardown),
-`packages/redis/src/relay.ts` (return teardown).
+`packages/core/src/redis-relay.ts` (return teardown).

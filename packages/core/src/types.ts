@@ -14,6 +14,13 @@ export interface DiagnosticEvent<TPayload = unknown> {
    * versioning existed (treat an absent `v` as the original, unversioned shape).
    */
   v?: number;
+  /**
+   * Unique id of this envelope (a UUID), stamped by `emit`. Relays carry it unchanged, so the
+   * same event has the same `id` in every process it reaches. Delivering transports use it as
+   * the idempotency key: one delivery per `(listener, id)`. Optional on the type so observers
+   * stay tolerant of envelopes published before ids existed.
+   */
+  id?: string;
   /** Epoch millis when the event was emitted (`Date.now()` at publish time). */
   ts: number;
   /** The emitting library, e.g. `'billing'` — the `<lib>` in `aviary:<lib>:<event>`. */
@@ -131,6 +138,8 @@ export interface SpanEvent<TPayload = unknown, TResult = unknown> {
    * so observers stay tolerant of legacy/untagged envelopes.
    */
   v?: number;
+  /** Unique id of this phase envelope (a UUID), stamped by `trace`. Correlate phases with `spanId`. */
+  id?: string;
   /** Epoch millis when this phase event was published (`Date.now()`). */
   ts: number;
   /** The emitting library — the `<lib>` in `aviary:<lib>:<event>`. */

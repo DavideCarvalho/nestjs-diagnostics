@@ -1,5 +1,38 @@
-export { ON_DIAGNOSTIC_META, OnDiagnostic } from './on-diagnostic.decorator.js';
-export type { OnDiagnosticMeta } from './on-diagnostic.decorator.js';
+export {
+  type DiagnosticEventOf,
+  type ListenerEventMatcher,
+  type ListenerMethodDecorator,
+  ON_DIAGNOSTIC_META,
+  OnDiagnostic,
+  type OnDiagnosticMeta,
+} from './on-diagnostic.decorator.js';
 export { DiagnosticsModule } from './diagnostics.module.js';
-export { DiagnosticsExplorer } from './diagnostics.explorer.js';
+export {
+  DIAGNOSTICS_OPTIONS,
+  type DiagnosticsModuleAsyncOptions,
+  type DiagnosticsModuleOptions,
+} from './diagnostics.options.js';
+export {
+  DiagnosticsExplorer,
+  type RegisteredListener,
+  UnknownDiagnosticListenerError,
+} from './diagnostics.explorer.js';
+export type { DiagnosticsRole } from './role.js';
+export type {
+  DeliveredEvent,
+  DeliveryTransportContext,
+  DurableDiagnosticsDeliveryModule,
+  DurableTransportConfig,
+  ListenerDelivery,
+  ListenerDeliveryTransport,
+  ListenerInvoker,
+} from './delivery.js';
+export {
+  type QueueTransportConfig,
+  type RedisTransportConfig,
+  type TransportContext,
+  type TransportHandle,
+  type TransportProvider,
+  transports,
+} from './transports.js';
 export { InjectCapability } from '../inject-capability.js';

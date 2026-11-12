@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import diagnostics_channel, { type Channel } from 'node:diagnostics_channel';
 import { channelName } from './channel.js';
 import { resolveTraceId } from './context-accessor.js';
@@ -119,6 +120,7 @@ function publishPhase(
   try {
     const envelope: SpanEvent = {
       v: SPAN_SCHEMA_VERSION,
+      id: randomUUID(),
       ts: Date.now(),
       lib,
       event,
