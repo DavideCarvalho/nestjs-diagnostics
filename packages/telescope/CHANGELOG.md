@@ -1,5 +1,16 @@
 # @dudousxd/nestjs-diagnostics-telescope
 
+## 0.8.0
+
+### Minor Changes
+
+- [#83](https://github.com/DavideCarvalho/nestjs-diagnostics/pull/83) [`8165587`](https://github.com/DavideCarvalho/nestjs-diagnostics/commit/8165587650f3809b417b2b9294d6a8a5ab490a2a) Thanks [@DavideCarvalho](https://github.com/DavideCarvalho)! - **Breaking:** require Node.js 24 or newer (`engines.node` is now `>=24`, was `>=20`). CI tests on Node 24 and 26. No API changes: see the Upgrading page in the docs.
+
+### Patch Changes
+
+- Updated dependencies [[`8165587`](https://github.com/DavideCarvalho/nestjs-diagnostics/commit/8165587650f3809b417b2b9294d6a8a5ab490a2a)]:
+  - @dudousxd/nestjs-diagnostics@0.10.0
+
 ## 0.7.5
 
 ### Patch Changes
