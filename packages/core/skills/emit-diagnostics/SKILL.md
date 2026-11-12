@@ -47,6 +47,7 @@ standard `DiagnosticEvent` envelope:
 ```ts
 interface DiagnosticEvent<TPayload = unknown> {
   v?: number;        // SCHEMA_VERSION stamped by emit (currently 1)
+  id?: string;       // unique UUID stamped by emit; relays carry it unchanged
   ts: number;        // Date.now() at publish time
   lib: string;       // the <lib>, e.g. "billing"
   event: string;     // the <event>, e.g. "invoice-paid"
