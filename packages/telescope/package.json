@@ -51,7 +51,7 @@
   "devDependencies": {
     "@dudousxd/nestjs-telescope": "3.0.0",
     "@dudousxd/nestjs-telescope-testing": "1.13.0",
-    "@types/node": "20.19.43",
+    "@types/node": "26.6.6",
     "typescript": "5.9.3",
     "vitest": "3.2.7"
   },
