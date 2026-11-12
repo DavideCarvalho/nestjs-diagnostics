@@ -219,6 +219,15 @@ function channelRows(): ChannelRow[] {
   return [...aviary, ...official];
 }
 
+/**
+ * Whether someone listens to a channel. A `null` count only happens when Node reports
+ * `hasSubscribers` without a subscriber list, so an unknown count means listened to.
+ */
+function isListened(row: ChannelRow): boolean {
+  if (row.subscribers === null || row.spanSubscribers === null) return true;
+  return row.subscribers + (row.spanSubscribers ?? 0) > 0;
+}
+
 function describeTransport(options: DiagnosticsModuleOptions): {
   name: string | null;
   kind: string;
@@ -268,9 +277,7 @@ export function diagnosticsDevTools(deps: DiagnosticsDevToolsDeps): DiagnosticsD
           .filter((c) => only === undefined || c.lib === only)
           .filter((c) => source === undefined || c.source === source)
           .filter((c) =>
-            typeof input.subscribed === 'boolean'
-              ? (c.subscribers ?? 0) + (c.spanSubscribers ?? 0) > 0 === input.subscribed
-              : true,
+            typeof input.subscribed === 'boolean' ? isListened(c) === input.subscribed : true,
           );
         return pageOf(items, input);
       },

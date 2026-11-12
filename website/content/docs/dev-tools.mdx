@@ -38,7 +38,7 @@ AgentMcpServerModule.forRoot({
 Without `devTools.authorize`, the tools are open outside production and denied in production.
 
 <Callout type="warn">
-  An agent MCP server too old to gate libs without a console leaves the diagnostics tools out. It never serves them ungated. Upgrade `@dudousxd/nestjs-agent-mcp-server` to get them.
+  The tools need an `@dudousxd/nestjs-agent-mcp-server` release with endpoint-level `devTools.authorize`. Diagnostics registers without an `authorize` and stays out of a hub that reports it cannot gate libs without a console. Earlier releases refuse a lib that has no `authorize`, so the diagnostics tools don't show up there; upgrade to get them.
 </Callout>
 
 ## Turning them off
