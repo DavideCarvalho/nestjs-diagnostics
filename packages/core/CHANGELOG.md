@@ -1,5 +1,13 @@
 # @dudousxd/nestjs-diagnostics
 
+## 0.11.0
+
+### Minor Changes
+
+- [#87](https://github.com/DavideCarvalho/nestjs-diagnostics/pull/87) [`bc3f049`](https://github.com/DavideCarvalho/nestjs-diagnostics/commit/bc3f049c7fdc8b4fada0c6593fc8f399e4bd6bba) Thanks [@DavideCarvalho](https://github.com/DavideCarvalho)! - Add MCP dev tools: `DiagnosticsModule` registers `diagnostics_list_channels`, `diagnostics_list_listeners` and `diagnostics_list_recent_events` in the Aviary dev-tools slot (`Symbol.for('@dudousxd/aviary:dev-tools')`, created when absent). They register without an `authorize`, so the agent dev endpoint's `devTools.authorize` gates them (open outside production, denied in production without it); a hub that cannot gate console-less libs leaves them out. `devTools: false` turns them off. `transportKind(provider)` tells which built-in factory made a transport.
+
+- [#87](https://github.com/DavideCarvalho/nestjs-diagnostics/pull/87) [`bc3f049`](https://github.com/DavideCarvalho/nestjs-diagnostics/commit/bc3f049c7fdc8b4fada0c6593fc8f399e4bd6bba) Thanks [@DavideCarvalho](https://github.com/DavideCarvalho)! - Add a recent-events buffer: a fixed-size in-process ring of the last diagnostics events (`aviary:*` events, `trace()` span phases and first-party `nestjs:*` events), with secret-looking keys redacted and payloads cut to 2 KB. `DiagnosticsModule` starts it unless `NODE_ENV` is `'production'`; `recent: true | { size } | false` overrides the default. Read it with the `DiagnosticsRecentEvents` provider or `recentEvents(filter)`.
+
 ## 0.10.0
 
 ### Minor Changes
