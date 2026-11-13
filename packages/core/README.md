@@ -134,6 +134,30 @@ These channels are not added to the `aviary:*` registry
 (`registeredChannels`/`onChannelRegistered`). Their lists are fixed, so subscribe
 to them explicitly.
 
+## Recent events
+
+`DiagnosticsModule` keeps the last events of the process (`aviary:*` events,
+`trace()` span phases and `nestjs:*` events) in a fixed-size ring, with
+secret-looking keys redacted and payloads cut to 2 KB. It is on unless
+`NODE_ENV` is `'production'`; `recent: true | { size } | false` overrides that.
+
+```ts
+DiagnosticsModule.forRoot({ recent: { size: 1000 } });
+
+// inject DiagnosticsRecentEvents, or anywhere:
+import { recentEvents } from '@dudousxd/nestjs-diagnostics';
+recentEvents({ lib: 'durable', event: /run\.failed/, traceId: 'req-42', limit: 50 });
+```
+
+## MCP dev tools
+
+With `@dudousxd/nestjs-agent-mcp-server` mounted, `DiagnosticsModule` registers
+three read-only tools on the Aviary dev MCP endpoint:
+`diagnostics_list_channels`, `diagnostics_list_listeners` and
+`diagnostics_list_recent_events`. Diagnostics has no console, so the endpoint's
+`devTools.authorize` gates them: without it they are open outside production and
+denied in production. `devTools: false` leaves them out.
+
 ## API
 
 | Export | Description |
@@ -148,6 +172,8 @@ to them explicitly.
 | `CONTEXT_ACCESSOR` | Shared DI token for the optional context accessor. |
 | `subscribeOfficial(lib, types \| 'all', fn)` | Subscribe to first-party `nestjs:<lib>:<type>` channels, each payload wrapped in the envelope (+ `source: 'nestjs'`). Returns an unsubscribe. |
 | `OFFICIAL_CHANNELS`, `NESTJS_*_CHANNELS`, `OFFICIAL_PACKAGE_VERSIONS`, `officialChannelNames()` | The pinned first-party channel lists. |
+| `recentEvents(filter?)` | The newest buffered events (newest first), `[]` when the buffer is off. |
+| `startRecentEvents(size?)`, `stopRecentEvents()`, `recentEventsBuffer()` | Run the recent-events buffer without `DiagnosticsModule`. |
 | `DiagnosticEvent`, `EmitOptions`, `ContextAccessor`, `OfficialDiagnosticEvent` | Types. |
 
 ## Reacting to events in NestJS — `@OnDiagnostic`

@@ -1,0 +1,50 @@
+---
+title: MCP dev tools
+description: Let a coding agent list the diagnostics channels, listeners and recent events of a running app over the Aviary dev MCP endpoint.
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+When the app also mounts `@dudousxd/nestjs-agent-mcp-server`, `DiagnosticsModule` adds three read-only tools to its Aviary dev MCP endpoint (`/mcp/aviary` by default). Connect your agent to it:
+
+```bash
+claude mcp add --transport http aviary http://localhost:3000/mcp/aviary
+```
+
+## Tools
+
+| Tool | Input | Returns |
+| --- | --- | --- |
+| `diagnostics_list_channels` | `lib?`, `source?` (`'aviary'` or `'nestjs'`), `subscribed?`, `limit`, `page` | Every `aviary:*` channel the process has seen and every first-party `nestjs:*` channel, with `lib`, `event`, `source`, `subscribers` and, for `aviary:*`, `spanSubscribers` (the `trace()` sub-channels). `0` means publishing costs nothing. The recent-events buffer is not counted. |
+| `diagnostics_list_listeners` | `lib?`, `limit`, `page` | One row per `@OnDiagnostic` binding: `id` (`<Class>#<method>`), `lib`, `event` (exact, `/regex/` or `'*'`), `method`, plus `transport: { name, kind, role }` (`kind` is `local`, `redis`, `queue`, `durable` or `custom`). |
+| `diagnostics_list_recent_events` | `lib?`, `event?` (exact or `/regex/`), `traceId?`, `limit`, `page` | The [recent events](./recent-events) of the process that answered, newest first, with `enabled`, `buffered`, `size` and `scope: 'this process'`. When the buffer is off: `enabled: false` and a hint. |
+
+Lists return `{ items, next }`: `limit` defaults to 20 (max 100), and `next` is the `page` to ask for, or `null` on the last page.
+
+Each process has its own channels, listeners and buffer: the tools describe the process the MCP request reached.
+
+## Who may call them
+
+Diagnostics has no console, so it registers its tools without a gate of its own. The dev endpoint's `devTools.authorize` decides:
+
+```ts
+AgentMcpServerModule.forRoot({
+  devTools: {
+    authorize: (context) => /* the same forms a console's authorize accepts */,
+  },
+});
+```
+
+Without `devTools.authorize`, the tools are open outside production and denied in production.
+
+<Callout type="warn">
+  The tools need an `@dudousxd/nestjs-agent-mcp-server` release with endpoint-level `devTools.authorize`. Diagnostics registers without an `authorize` and stays out of a hub that reports it cannot gate libs without a console. Earlier releases refuse a lib that has no `authorize`, so the diagnostics tools don't show up there; upgrade to get them.
+</Callout>
+
+## Turning them off
+
+```ts
+DiagnosticsModule.forRoot({ devTools: false });
+```
+
+`diagnostics_list_recent_events` reads the recent-events buffer, which `recent` controls separately.

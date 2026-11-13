@@ -36,6 +36,18 @@ export {
   type RedisLike,
   type RedisPipelineLike,
 } from './redis-relay.js';
+export {
+  boundPayload,
+  DEFAULT_RECENT_SIZE,
+  RECENT_PAYLOAD_BYTES,
+  type RecentEvent,
+  RecentEventsBuffer,
+  type RecentEventsFilter,
+  recentEvents,
+  recentEventsBuffer,
+  startRecentEvents,
+  stopRecentEvents,
+} from './recent.js';
 export { isRelayed, publishRelayed } from './relayed.js';
 export {
   onChannelRegistered,

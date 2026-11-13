@@ -1,11 +1,13 @@
 import { type DynamicModule, Module } from '@nestjs/common';
 import { DiscoveryModule } from '@nestjs/core';
+import { DiagnosticsDevTools } from './dev-tools.js';
 import { DiagnosticsExplorer } from './diagnostics.explorer.js';
 import {
   DIAGNOSTICS_OPTIONS,
   type DiagnosticsModuleAsyncOptions,
   type DiagnosticsModuleOptions,
 } from './diagnostics.options.js';
+import { DiagnosticsRecentEvents, resolveRecentSize } from './recent-events.service.js';
 import type { TransportProvider } from './transports.js';
 
 @Module({})
@@ -17,11 +19,19 @@ export class DiagnosticsModule {
   static forRoot<TTransports extends Record<string, TransportProvider>>(
     options: DiagnosticsModuleOptions<TTransports> = {},
   ): DynamicModule {
+    // Fail at forRoot() on a bad `recent.size`, not mid-init.
+    resolveRecentSize(options.recent);
     return {
       module: DiagnosticsModule,
       global: true,
       imports: [DiscoveryModule],
-      providers: [{ provide: DIAGNOSTICS_OPTIONS, useValue: options }, DiagnosticsExplorer],
+      providers: [
+        { provide: DIAGNOSTICS_OPTIONS, useValue: options },
+        DiagnosticsExplorer,
+        DiagnosticsRecentEvents,
+        DiagnosticsDevTools,
+      ],
+      exports: [DiagnosticsRecentEvents],
     };
   }
 
@@ -38,7 +48,10 @@ export class DiagnosticsModule {
           inject: (options.inject ?? []) as never,
         },
         DiagnosticsExplorer,
+        DiagnosticsRecentEvents,
+        DiagnosticsDevTools,
       ],
+      exports: [DiagnosticsRecentEvents],
     };
   }
 }
