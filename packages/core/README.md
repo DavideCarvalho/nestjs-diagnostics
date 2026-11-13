@@ -149,6 +149,15 @@ import { recentEvents } from '@dudousxd/nestjs-diagnostics';
 recentEvents({ lib: 'durable', event: /run\.failed/, traceId: 'req-42', limit: 50 });
 ```
 
+## MCP dev tools
+
+With `@dudousxd/nestjs-agent-mcp-server` mounted, `DiagnosticsModule` registers
+three read-only tools on the Aviary dev MCP endpoint:
+`diagnostics_list_channels`, `diagnostics_list_listeners` and
+`diagnostics_list_recent_events`. Diagnostics has no console, so the endpoint's
+`devTools.authorize` gates them: without it they are open outside production and
+denied in production. `devTools: false` leaves them out.
+
 ## API
 
 | Export | Description |

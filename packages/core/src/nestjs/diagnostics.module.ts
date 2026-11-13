@@ -1,5 +1,6 @@
 import { type DynamicModule, Module } from '@nestjs/common';
 import { DiscoveryModule } from '@nestjs/core';
+import { DiagnosticsDevTools } from './dev-tools.js';
 import { DiagnosticsExplorer } from './diagnostics.explorer.js';
 import {
   DIAGNOSTICS_OPTIONS,
@@ -28,6 +29,7 @@ export class DiagnosticsModule {
         { provide: DIAGNOSTICS_OPTIONS, useValue: options },
         DiagnosticsExplorer,
         DiagnosticsRecentEvents,
+        DiagnosticsDevTools,
       ],
       exports: [DiagnosticsRecentEvents],
     };
@@ -47,6 +49,7 @@ export class DiagnosticsModule {
         },
         DiagnosticsExplorer,
         DiagnosticsRecentEvents,
+        DiagnosticsDevTools,
       ],
       exports: [DiagnosticsRecentEvents],
     };

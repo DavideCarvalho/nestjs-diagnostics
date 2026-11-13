@@ -142,13 +142,28 @@ function classifyImportError(error: unknown, pkg: string): 'missing' | 'outdated
  * Each factory returns a lazy {@link TransportProvider}: only the selected `default` starts, and
  * only it imports its optional dependency.
  */
+/** The built-in transport kinds. */
+export type TransportKind = 'redis' | 'queue' | 'durable';
+
+const kinds = new WeakMap<TransportProvider, TransportKind>();
+
+function tagKind(kind: TransportKind, provider: TransportProvider): TransportProvider {
+  kinds.set(provider, kind);
+  return provider;
+}
+
+/** Which built-in factory made `provider`, or `undefined` for a custom one. */
+export function transportKind(provider: unknown): TransportKind | undefined {
+  return typeof provider === 'function' ? kinds.get(provider as TransportProvider) : undefined;
+}
+
 export const transports = {
   /**
    * Broadcast over Redis pub/sub, best-effort: listeners run in every process the event reaches.
    * Events of libs with listeners are forwarded automatically; `libs`/`channels`/`all` forward more.
    */
   redis(config: RedisTransportConfig): TransportProvider {
-    return async (ctx) => {
+    return tagKind('redis', async (ctx) => {
       const libs = [...new Set([...(config.libs ?? []), ...ctx.listenerLibs])];
       const receive = ctx.role !== 'api';
       const stop = createDiagnosticsRedisRelay({
@@ -161,7 +176,7 @@ export const transports = {
         nodeId: ctx.nodeId,
       });
       return { stop };
-    };
+    });
   },
 
   /**
@@ -170,7 +185,7 @@ export const transports = {
    * Requires the optional peer `bullmq`.
    */
   queue(config: QueueTransportConfig): TransportProvider {
-    return async (ctx) => {
+    return tagKind('queue', async (ctx) => {
       let bullmq: unknown;
       try {
         bullmq = await loaders.bullmq();
@@ -186,7 +201,7 @@ export const transports = {
         config,
         ctx,
       );
-    };
+    });
   },
 
   /**
@@ -196,7 +211,7 @@ export const transports = {
    * durable is not configured.
    */
   durable(config: DurableTransportConfig = {}): TransportProvider {
-    return async (ctx) => {
+    return tagKind('durable', async (ctx) => {
       let durable: DurableDiagnosticsDeliveryModule;
       try {
         durable = await loaders.durable();
@@ -223,6 +238,6 @@ export const transports = {
         },
         config,
       );
-    };
+    });
   },
 };
