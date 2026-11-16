@@ -91,6 +91,20 @@ export class AiService {
 `durationMs` is set on the envelope **only when you pass it** — omit it for events that aren't tied to a timed operation, and the key won't appear at all. There's no need to send `0` or a placeholder.
 </Callout>
 
+## Naming the app an event is about
+
+When an event belongs to a tenant app, pass `opts.app`. `emit` stamps it onto the envelope as `app`, relays carry it to other processes, the recent-events buffer keeps it, and the Telescope watcher tags the entry `app:<name>`:
+
+```ts
+emit('durable', 'run.failed', { runId }, { app: 'billing-api' });
+```
+
+`app` must match `[A-Za-z0-9_.-]{1,64}`, the same syntax as a partition name. An invalid value is dropped and the event is still published without it; outside production, `emit` warns once per value (`AVIARY_DIAGNOSTICS_INVALID_APP`). It never throws. Without `app`, the envelope has no `app` key, so older observers see exactly what they saw before.
+
+<Callout type="info" title="Who emits">
+The process that coordinates an action emits its event. When a control plane coordinates an action for a tenant, the control plane emits it with `app` set to the tenant's partition, and the tenant app does not emit a duplicate.
+</Callout>
+
 ## Tracing an operation
 
 `emit` is for a single fire-and-forget event. When the thing you want to observe has a real start/end/error shape — an outbound call, a durable step — wrap it in `trace(lib, event, fn, payload?, opts?)` instead of hand-rolling matching `emit` calls at both ends:
@@ -117,7 +131,7 @@ See [Consumers → Telescope](/docs/diagnostics/consumers#telescope-batteries-in
 
 | Export | Description |
 | --- | --- |
-| `emit(lib, event, payload, opts?)` | Build + publish a `DiagnosticEvent` on `aviary:<lib>:<event>` (only when subscribed). `opts` accepts `traceId`, `durationMs`, and `sample`. |
+| `emit(lib, event, payload, opts?)` | Build + publish a `DiagnosticEvent` on `aviary:<lib>:<event>` (only when subscribed). `opts` accepts `traceId`, `durationMs`, `sample`, and `app`. |
 | `trace(lib, event, fn, payload?, opts?)` | Wrap an operation and publish span-like `start`/`end`/`asyncStart`/`asyncEnd`/`error` events (see [Tracing an operation](#tracing-an-operation)). `opts` accepts `traceId`. |
 | `tracingChannel(lib, event)` | A `trace` bound to one `(lib, event)` pair, reused across calls. |
 | `traceChannelNames(lib, event)` | The five `aviary:<lib>:<event>:<phase>` sub-channel names for a pair. |

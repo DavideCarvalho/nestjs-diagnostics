@@ -28,6 +28,7 @@ interface DiagnosticEvent<TPayload = unknown> {
   event: string; // the <event>
   traceId?: string; // auto-filled from a context accessor when available
   payload: TPayload; // your library-defined data
+  app?: string; // the tenant app the event is about, when the emitter names one
 }
 ```
 
@@ -59,6 +60,12 @@ already holds a correlation id:
 ```ts
 emit('billing', 'invoice-paid', payload, { traceId });
 ```
+
+Pass `{ app: 'billing-api' }` to name the tenant app an event is about
+(`[A-Za-z0-9_.-]{1,64}`; an invalid value is dropped, never thrown). The process
+that coordinates an action emits its event: when a control plane coordinates it,
+the control plane emits with `app` set to the tenant, and the tenant does not
+emit a duplicate.
 
 ## Trace correlation
 

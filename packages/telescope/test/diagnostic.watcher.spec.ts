@@ -164,6 +164,26 @@ describe('DiagnosticWatcher', () => {
     expect(recorded[0]?.durationMs).toBeUndefined();
   });
 
+  it('tags an event that names its app with app:<name> and records it in content', async () => {
+    const watcher = new DiagnosticWatcher();
+    const { recorded } = await collectWatcherEntries(watcher);
+    cleanup = () => watcher.cleanup();
+
+    emit('durable', 'run.failed', { runId: 'r1' }, { app: 'tenant-a', traceId: 't-1' });
+    emit('durable', 'run.failed', { runId: 'r2' });
+
+    expect(recorded).toHaveLength(2);
+    expect(recorded[0]?.tags).toEqual([
+      'lib:durable',
+      'event:run.failed',
+      'trace:t-1',
+      'app:tenant-a',
+    ]);
+    expect((recorded[0]?.content as DiagnosticEntryContent).app).toBe('tenant-a');
+    expect(recorded[1]?.tags).toEqual(['lib:durable', 'event:run.failed']);
+    expect('app' in (recorded[1]?.content as object)).toBe(false);
+  });
+
   it('buildDiagnosticEntry passes durationMs from envelope to RecordInput', () => {
     const withDuration = buildDiagnosticEntry({
       ts: 1,

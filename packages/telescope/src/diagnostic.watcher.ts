@@ -64,6 +64,8 @@ export interface DiagnosticEntryContentBase {
 export interface DiagnosticEntryContent extends DiagnosticEntryContentBase {
   /** The library-defined payload, recorded as-is. */
   payload: unknown;
+  /** The tenant app the event is about, when the emitter named one (also tagged `app:<name>`). */
+  app?: string;
 }
 
 /**
@@ -275,6 +277,7 @@ export function buildDiagnosticEntry(msg: DiagnosticEvent): RecordInput<Diagnost
     ts: msg.ts,
     traceId: msg.traceId ?? null,
     payload: msg.payload,
+    ...(typeof msg.app === 'string' && msg.app !== '' && { app: msg.app }),
   };
   return {
     type: DIAGNOSTIC_ENTRY_TYPE,
@@ -284,6 +287,9 @@ export function buildDiagnosticEntry(msg: DiagnosticEvent): RecordInput<Diagnost
       `lib:${msg.lib}`,
       `event:${msg.event}`,
       ...(msg.traceId ? [`trace:${msg.traceId}`] : []),
+      // The tenant app the event is about, when the emitter named one (a control plane acting
+      // for a tenant). Lets the dashboard filter one tenant's events with `app:<name>`.
+      ...(typeof msg.app === 'string' && msg.app !== '' ? [`app:${msg.app}`] : []),
     ],
     content,
     // Forward the emitter-supplied duration so the OTel exporter can feed it

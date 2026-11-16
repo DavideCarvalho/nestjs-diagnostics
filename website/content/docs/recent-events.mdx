@@ -72,6 +72,7 @@ Both return the newest events first. `recentEvents()` returns `[]` when the buff
   event: 'run.failed',
   traceId: 'req-42',
   durationMs: 12,          // when the event has one
+  app: 'billing-api',      // when the emitter named the tenant app
   source: 'nestjs',        // only on first-party nestjs:* events
   payload: { runId: 'r1', token: '[redacted]' },
   phase: 'end',            // trace() spans: start, end, asyncEnd or error

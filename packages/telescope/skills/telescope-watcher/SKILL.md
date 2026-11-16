@@ -91,7 +91,8 @@ Source: `packages/telescope/src/diagnostics-telescope.extension.ts` (`Diagnostic
 
 Each publish becomes a `RecordInput` with `type: 'diagnostic'`, `familyHash`
 `<lib>:<event>` (so the dashboard rolls up "billing:invoice-paid"), tags, and a
-`DiagnosticEntryContent` (`v`, `lib`, `event`, `ts`, `traceId`, `payload`). An
+`DiagnosticEntryContent` (`v`, `lib`, `event`, `ts`, `traceId`, `payload`, and
+`app` when the envelope names one; such an entry is also tagged `app:<name>`). An
 emitter-supplied `durationMs` is forwarded so a downstream OTel exporter can feed
 a histogram. Malformed envelopes are rejected by `isDiagnosticEvent`.
 

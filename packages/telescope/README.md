@@ -39,7 +39,8 @@ export class BillingService {
 ```
 
 …a `diagnostic` entry lands in Telescope with `content` = the payload, the
-envelope's `traceId`, and tags `lib:billing` / `event:invoice-paid`.
+envelope's `traceId`, and tags `lib:billing` / `event:invoice-paid`. An envelope
+that names its tenant app (`emit(..., { app })`) is also tagged `app:<name>`.
 
 ## How the generic watcher auto-subscribes
 
