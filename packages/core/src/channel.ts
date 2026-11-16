@@ -38,12 +38,13 @@ const MAX_WARNED_APPS = 100;
 function validApp(app: unknown): string | undefined {
   if (typeof app === 'string' && APP_PATTERN.test(app)) return app;
   if (process.env.NODE_ENV === 'production') return undefined;
-  const key = typeof app === 'string' ? app : `<${typeof app}>`;
+  // Truncated, so the cap bounds the bytes kept as well as the number of values.
+  const key = typeof app === 'string' ? app.slice(0, 80) : `<${typeof app}>`;
   if (warnedApps.has(key) || warnedApps.size >= MAX_WARNED_APPS) return undefined;
   warnedApps.add(key);
   try {
     process.emitWarning(
-      `emit() dropped app ${JSON.stringify(key.slice(0, 80))}: it must match [A-Za-z0-9_.-]{1,64}`,
+      `emit() dropped app ${JSON.stringify(key)}: it must match [A-Za-z0-9_.-]{1,64}`,
       { code: 'AVIARY_DIAGNOSTICS_INVALID_APP' },
     );
   } catch {
@@ -69,7 +70,10 @@ const channelCache = new Map<string, Map<string, Channel>>();
 
 // Drop the memo cache whenever the registry is reset (test-only), so the next
 // getChannel re-registers every channel. See onRegistryReset in registry.ts.
-onRegistryReset(() => channelCache.clear());
+onRegistryReset(() => {
+  channelCache.clear();
+  warnedApps.clear();
+});
 
 /**
  * The memoized `node:diagnostics_channel` for a `<lib>`/`<event>` pair. Node

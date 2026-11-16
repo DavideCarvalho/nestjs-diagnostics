@@ -80,6 +80,18 @@ describe('emit app attribution', () => {
     expect(warn).toHaveBeenCalledTimes(1);
   });
 
+  it('resetRegistry() forgets the values already warned about', () => {
+    const warn = vi.spyOn(process, 'emitWarning').mockImplementation(() => {});
+    const cap = capture('durable', 'run.started');
+    teardowns.push(cap.stop);
+
+    emit('durable', 'run.started', {}, { app: 'warn again' });
+    resetRegistry();
+    emit('durable', 'run.started', {}, { app: 'warn again' });
+
+    expect(warn).toHaveBeenCalledTimes(2);
+  });
+
   it('does not warn in production', () => {
     vi.stubEnv('NODE_ENV', 'production');
     const warn = vi.spyOn(process, 'emitWarning').mockImplementation(() => {});
@@ -147,5 +159,21 @@ describe('emit app attribution', () => {
     const [newest, oldest] = recentEvents();
     expect(oldest?.app).toBe('tenant-a');
     expect(newest && 'app' in newest).toBe(false);
+  });
+
+  it('the recent-events buffer drops an empty app from a raw publish', () => {
+    startRecentEvents(10);
+    teardowns.push(() => stopRecentEvents());
+
+    getChannel('durable', 'run.failed').publish({
+      ts: 1,
+      lib: 'durable',
+      event: 'run.failed',
+      payload: {},
+      app: '',
+    } satisfies DiagnosticEvent);
+
+    const [entry] = recentEvents();
+    expect(entry && 'app' in entry).toBe(false);
   });
 });

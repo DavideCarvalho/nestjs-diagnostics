@@ -240,7 +240,9 @@ export class RecentEventsBuffer {
         event: envelope.event,
         ...(typeof envelope.traceId === 'string' ? { traceId: envelope.traceId } : {}),
         ...(typeof envelope.durationMs === 'number' ? { durationMs: envelope.durationMs } : {}),
-        ...('app' in envelope && typeof envelope.app === 'string' ? { app: envelope.app } : {}),
+        ...('app' in envelope && typeof envelope.app === 'string' && envelope.app !== ''
+          ? { app: envelope.app }
+          : {}),
         ...(source !== undefined ? { source } : {}),
         payload: boundPayload(envelope.payload),
         ...(span !== null ? { phase: span.phase, spanId: span.spanId } : {}),
