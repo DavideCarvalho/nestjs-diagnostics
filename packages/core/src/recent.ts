@@ -24,6 +24,8 @@ export interface RecentEvent {
   event: string;
   traceId?: string;
   durationMs?: number;
+  /** The tenant app the event is about, when the emitter named one. */
+  app?: string;
   /** `'nestjs'` for an event of a first-party `nestjs:*` channel. Absent on `aviary:*` events. */
   source?: 'nestjs';
   /** The payload with secret-looking keys replaced, or a `{ truncated, bytes, preview }` cut. */
@@ -238,6 +240,9 @@ export class RecentEventsBuffer {
         event: envelope.event,
         ...(typeof envelope.traceId === 'string' ? { traceId: envelope.traceId } : {}),
         ...(typeof envelope.durationMs === 'number' ? { durationMs: envelope.durationMs } : {}),
+        ...('app' in envelope && typeof envelope.app === 'string' && envelope.app !== ''
+          ? { app: envelope.app }
+          : {}),
         ...(source !== undefined ? { source } : {}),
         payload: boundPayload(envelope.payload),
         ...(span !== null ? { phase: span.phase, spanId: span.spanId } : {}),

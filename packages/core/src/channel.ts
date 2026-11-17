@@ -23,6 +23,36 @@ export function channelName(lib: string, event: string): string {
   return `${CHANNEL_PREFIX}:${lib}:${event}`;
 }
 
+/** The syntax an envelope `app` must match: a tenant partition name. */
+const APP_PATTERN = /^[A-Za-z0-9_.-]{1,64}$/;
+
+/** Invalid `app` values already warned about, so a hot emitter warns once per value. */
+const warnedApps = new Set<string>();
+const MAX_WARNED_APPS = 100;
+
+/**
+ * `app` when it is a valid partition name, else `undefined`. An invalid value is dropped with a
+ * warning (outside production, once per value, capped at {@link MAX_WARNED_APPS} values). Never
+ * throws.
+ */
+function validApp(app: unknown): string | undefined {
+  if (typeof app === 'string' && APP_PATTERN.test(app)) return app;
+  if (process.env.NODE_ENV === 'production') return undefined;
+  // Truncated, so the cap bounds the bytes kept as well as the number of values.
+  const key = typeof app === 'string' ? app.slice(0, 80) : `<${typeof app}>`;
+  if (warnedApps.has(key) || warnedApps.size >= MAX_WARNED_APPS) return undefined;
+  warnedApps.add(key);
+  try {
+    process.emitWarning(
+      `emit() dropped app ${JSON.stringify(key)}: it must match [A-Za-z0-9_.-]{1,64}`,
+      { code: 'AVIARY_DIAGNOSTICS_INVALID_APP' },
+    );
+  } catch {
+    // A throwing warning listener must not break the emitter.
+  }
+  return undefined;
+}
+
 /**
  * Per-`(lib, event)` cache of the resolved {@link Channel}, keyed by `lib` then
  * `event`. The first {@link getChannel}/{@link emit} for a pair pays the string
@@ -40,7 +70,10 @@ const channelCache = new Map<string, Map<string, Channel>>();
 
 // Drop the memo cache whenever the registry is reset (test-only), so the next
 // getChannel re-registers every channel. See onRegistryReset in registry.ts.
-onRegistryReset(() => channelCache.clear());
+onRegistryReset(() => {
+  channelCache.clear();
+  warnedApps.clear();
+});
 
 /**
  * The memoized `node:diagnostics_channel` for a `<lib>`/`<event>` pair. Node
@@ -82,6 +115,9 @@ export function getChannel(lib: string, event: string): Channel {
  *   and BEFORE the envelope is built: a falsy result sheds this event without
  *   allocating anything. Default (no `sample`) always publishes when subscribed.
  * - The envelope carries the current {@link SCHEMA_VERSION} as `v` and a fresh UUID as `id`.
+ * - `opts.app` names the tenant app the event is about and is stamped as `app` when it matches
+ *   `[A-Za-z0-9_.-]{1,64}`; an invalid value is dropped (with a warning outside production),
+ *   never thrown. Without `app` the envelope has no `app` key.
  * - Never throws: emitting observability must not break the caller.
  *
  * ```ts
@@ -108,6 +144,7 @@ export function emit<TLib extends LibOf, TEvent extends EventOf<TLib>>(
     // A throwing sampler is treated as a skip (caught below) — never published.
     if (opts?.sample !== undefined && !opts.sample()) return;
     const traceId = opts?.traceId ?? resolveTraceId();
+    const app = opts?.app === undefined ? undefined : validApp(opts.app);
     const envelope: DiagnosticEvent = {
       v: SCHEMA_VERSION,
       id: randomUUID(),
@@ -119,6 +156,7 @@ export function emit<TLib extends LibOf, TEvent extends EventOf<TLib>>(
       // Only set the key when a duration was provided — omitting it keeps the
       // envelope shape monomorphic (no undefined-valued key on common events).
       ...(opts?.durationMs !== undefined && { durationMs: opts.durationMs }),
+      ...(app !== undefined && { app }),
     };
     channel.publish(envelope);
   } catch {

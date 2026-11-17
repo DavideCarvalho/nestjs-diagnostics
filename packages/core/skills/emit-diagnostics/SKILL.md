@@ -1,6 +1,6 @@
 ---
 name: emit-diagnostics
-description: Emit observability events from @dudousxd/nestjs-diagnostics with emit(lib, event, payload, opts) over node:diagnostics_channel on aviary:<lib>:<event>. Covers the DiagnosticEvent envelope (v, id, ts, lib, event, traceId, payload, durationMs), zero-overhead hasSubscribers gating, EmitOptions sampling and durationMs, typed ChannelRegistry declaration merging, and trace correlation via setContextAccessor / CONTEXT_ACCESSOR. No module to register; the core barrel is framework-agnostic.
+description: Emit observability events from @dudousxd/nestjs-diagnostics with emit(lib, event, payload, opts) over node:diagnostics_channel on aviary:<lib>:<event>. Covers the DiagnosticEvent envelope (v, id, ts, lib, event, traceId, payload, durationMs, app), zero-overhead hasSubscribers gating, EmitOptions sampling, durationMs and app attribution, typed ChannelRegistry declaration merging, and trace correlation via setContextAccessor / CONTEXT_ACCESSOR. No module to register; the core barrel is framework-agnostic.
 license: MIT
 metadata:
   type: core
@@ -54,6 +54,7 @@ interface DiagnosticEvent<TPayload = unknown> {
   traceId?: string;  // auto-filled from a context accessor when present
   payload: TPayload; // your library-defined data
   durationMs?: number; // set only when EmitOptions.durationMs is passed
+  app?: string;        // set only when a valid EmitOptions.app is passed
 }
 ```
 
@@ -76,7 +77,7 @@ emit('authz', 'decision', { subject, allow: true });
 
 Source: `packages/core/src/channel.ts` (`emit`, the `hasSubscribers` gate).
 
-### 2. EmitOptions: explicit traceId, sampling, durationMs
+### 2. EmitOptions: explicit traceId, sampling, durationMs, app
 
 ```ts
 import { emit } from '@dudousxd/nestjs-diagnostics';
@@ -90,11 +91,18 @@ emit('authz', 'decision', payload, { sample: () => Math.random() < 0.1 });
 
 // Stamp a duration so downstream observers can build histograms:
 emit('cache', 'lookup', { key }, { durationMs: 4.2 });
+
+// Name the tenant app the event is about (Telescope tags it app:<name>):
+emit('durable', 'run.failed', { runId }, { app: 'billing-api' });
 ```
 
 `sample` returning `false` (or throwing) sheds the event without allocating the
 envelope. `durationMs` is set on the envelope only when provided, keeping the
-common envelope shape monomorphic.
+common envelope shape monomorphic. `app` must match `[A-Za-z0-9_.-]{1,64}`; an
+invalid value is dropped (the event still publishes, with a warning outside
+production) and `emit` never throws. The process that coordinates the action
+emits it: a control plane acting for a tenant emits with `app` set to the
+tenant, and the tenant does not emit a duplicate.
 
 Source: `packages/core/src/types.ts` (`EmitOptions`), `packages/core/src/channel.ts`.
 

@@ -31,10 +31,11 @@ interface DiagnosticEvent<TPayload = unknown> {
   traceId?: string;   // auto-filled from nestjs-context when present
   payload: TPayload;  // your library-defined data
   durationMs?: number; // wall-clock duration of a timed operation, when known
+  app?: string;       // the tenant app the event is about, when the emitter names one
 }
 ```
 
-`durationMs` is **optional** and only present when the emitter measured how long the operation took (see [Getting Started](/docs/diagnostics/getting-started#timing-an-operation)). Events that don't describe a timed operation omit it entirely, so the common envelope stays free of an `undefined`-valued key.
+`durationMs` is **optional** and only present when the emitter measured how long the operation took (see [Getting Started](/docs/diagnostics/getting-started#timing-an-operation)). Events that don't describe a timed operation omit it entirely, so the common envelope stays free of an `undefined`-valued key. `app` is optional too: a control plane acting for a tenant names the tenant there (see [Naming the app an event is about](/docs/diagnostics/getting-started#naming-the-app-an-event-is-about)).
 
 For an operation with a real start/end/error shape rather than a single point-in-time event, `trace(lib, event, fn, payload?, opts?)` is the other half of the surface: it publishes a matched `start`/`end`/`asyncStart`/`asyncEnd`/`error` sequence sharing one `spanId`, instead of a single envelope on the base channel. See [Tracing an operation](/docs/diagnostics/getting-started#tracing-an-operation) — and, on the consumer side, [how a completed span becomes one recorded entry](/docs/diagnostics/consumers#telescope-batteries-included).
 
